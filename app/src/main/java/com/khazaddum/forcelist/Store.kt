@@ -25,6 +25,7 @@ class Store private constructor(private val sp: android.content.SharedPreference
         private const val K_INSTALL_BLOCK = "installBlock"
         private const val K_WEB = "web"
         private const val K_FW = "firewall"
+        private const val K_HISTORY = "history"
         private const val K_PENDING = "pending"
         // Types d'action en attente, encodés "KIND\u001Fpayload\u001FeffectiveMillis".
         private const val UB = "UB" // débloquer une app     (payload = package)
@@ -54,6 +55,20 @@ class Store private constructor(private val sp: android.content.SharedPreference
     /** Pare-feu réseau actif ? (phase de test : bascule immédiate dans les deux sens). */
     val firewallEnabled: Boolean get() = sp.getBoolean(K_FW, false)
     fun setFirewallEnabled(on: Boolean) = sp.edit().putBoolean(K_FW, on).apply()
+
+    // --- historique de navigation (plus récent en tête, borné) ---
+    fun history(): List<String> =
+        sp.getString(K_HISTORY, "")!!.split('\n').filter { it.isNotEmpty() }
+
+    fun addHistory(url: String) {
+        if (url.isBlank() || url.startsWith("about:")) return
+        val list = history().toMutableList()
+        list.remove(url); list.add(0, url)
+        while (list.size > 200) list.removeAt(list.size - 1)
+        sp.edit().putString(K_HISTORY, list.joinToString("\n")).apply()
+    }
+
+    fun clearHistory() = sp.edit().remove(K_HISTORY).apply()
 
     private fun pending(): MutableList<Triple<String, String, Long>> =
         sp.getStringSet(K_PENDING, emptySet())!!.mapNotNull { s ->
