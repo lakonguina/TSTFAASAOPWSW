@@ -3,8 +3,10 @@ package com.khazaddum.forcelist
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.os.UserManager
 
@@ -72,6 +74,22 @@ object PolicyManager {
         // NB : on n'ajoute PAS DISALLOW_DEBUGGING_FEATURES — ce serait couper adb,
         // donc la seule sortie de secours voulue.
         runCatching { dpm.addUserRestriction(admin, UserManager.DISALLOW_SAFE_BOOT) }
+
+        // Navigateur par défaut non contournable : tout lien http/https ouvre notre
+        // navigateur. On repart à zéro puis on repose la règle (idempotent).
+        runCatching {
+            dpm.clearPackagePersistentPreferredActivities(admin, pkg)
+            val web = IntentFilter(Intent.ACTION_VIEW).apply {
+                addCategory(Intent.CATEGORY_DEFAULT)
+                addCategory(Intent.CATEGORY_BROWSABLE)
+                addDataScheme("http")
+                addDataScheme("https")
+            }
+            dpm.addPersistentPreferredActivity(
+                admin, web, ComponentName(pkg, "$pkg.BrowserActivity"),
+            )
+        }
+        lines += "Navigateur par défaut : imposé"
 
         scheduleNext(context, nextWake)
         if (nextWake != null) {

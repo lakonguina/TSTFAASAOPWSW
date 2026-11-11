@@ -24,6 +24,11 @@ android {
         targetSdk = 34
         versionCode = 6
         versionName = "6.0"
+
+        // GeckoView embarque du natif par architecture. Sans filtre, l'APK pèse les
+        // 4 ABI (~650 Mo). On garde l'arm64 du téléphone réel + le x86_64 de l'émulateur.
+        // (Pour une diffusion propre : splits par ABI ou App Bundle.)
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
     signingConfigs {
@@ -72,4 +77,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // Navigateur embarqué : GeckoView (moteur Firefox). Version ESR 128, compatible
+    // compileSdk 34. C'est la seule base Android qui laisse l'app filtrer la navigation.
+    implementation("org.mozilla.geckoview:geckoview:128.0.20240725162350")
 }

@@ -23,11 +23,13 @@ class Store private constructor(private val sp: android.content.SharedPreference
         private const val K_KNOWN = "known"
         private const val K_EXT = "ext"
         private const val K_INSTALL_BLOCK = "installBlock"
+        private const val K_WEB = "web"
         private const val K_PENDING = "pending"
         // Types d'action en attente, encodés "KIND\u001Fpayload\u001FeffectiveMillis".
         private const val UB = "UB" // débloquer une app     (payload = package)
         private const val DD = "DD" // baisser le délai       (payload = minutes)
         private const val XR = "XR" // retirer une extension  (payload = "id;url")
+        private const val WR = "WR" // retirer une règle web  (payload = motif)
         private const val SEP = "\u001F"
     }
 
@@ -45,6 +47,9 @@ class Store private constructor(private val sp: android.content.SharedPreference
     val installBlocked: Set<String> get() = sp.getStringSet(K_INSTALL_BLOCK, emptySet())!!.toSet()
     fun isInstallBlocked(pkg: String): Boolean = pkg in installBlocked
 
+    /** Motifs interdits dans le navigateur : une URL qui en contient un est refusée. */
+    val blockedWeb: Set<String> get() = sp.getStringSet(K_WEB, emptySet())!!.toSet()
+
     private fun pending(): MutableList<Triple<String, String, Long>> =
         sp.getStringSet(K_PENDING, emptySet())!!.mapNotNull { s ->
             val p = s.split(SEP); if (p.size == 3) Triple(p[0], p[1], p[2].toLong()) else null
@@ -59,6 +64,7 @@ class Store private constructor(private val sp: android.content.SharedPreference
 
     fun pendingUnblockAt(pkg: String) = pendingAt(UB, pkg)
     fun pendingExtRemovalAt(ext: String) = pendingAt(XR, ext)
+    fun pendingWebRemovalAt(pattern: String) = pendingAt(WR, pattern)
 
     /** Déblocages d'apps en attente : package -> instant d'effet. */
     fun pendingUnblocks(): Map<String, Long> =
@@ -67,6 +73,9 @@ class Store private constructor(private val sp: android.content.SharedPreference
     /** Retraits d'extensions en attente : "id;url" -> instant d'effet. */
     fun pendingExtRemovals(): Map<String, Long> =
         pending().filter { it.first == XR }.associate { it.second to it.third }
+    /** Retraits de règles web en attente : motif -> instant d'effet. */
+    fun pendingWebRemovals(): Map<String, Long> =
+        pending().filter { it.first == WR }.associate { it.second to it.third }
     fun pendingDelay(): Pair<Long, Long>? =
         pending().firstOrNull { it.first == DD }?.let { it.second.toLong() to it.third }
 
@@ -113,6 +122,20 @@ class Store private constructor(private val sp: android.content.SharedPreference
         }
     }
 
+    // --- opérations web ---
+    fun blockWeb(pattern: String) {
+        cancelPending(WR, pattern)
+        sp.edit().putStringSet(K_WEB, blockedWeb + pattern).apply()
+    }
+
+    fun unblockWeb(pattern: String) {
+        if (delayMinutes <= 0L) {
+            sp.edit().putStringSet(K_WEB, blockedWeb - pattern).apply()
+        } else if (pendingWebRemovalAt(pattern) == null && pattern in blockedWeb) {
+            savePending(pending() + Triple(WR, pattern, effective()))
+        }
+    }
+
     // --- délai ---
     fun requestDelay(newMin: Long) {
         savePending(pending().filterNot { it.first == DD }) // une seule baisse en attente à la fois
@@ -131,16 +154,19 @@ class Store private constructor(private val sp: android.content.SharedPreference
             var newBlocked = blocked
             var newExt = extensions
             var newInstallBlocked = installBlocked
+            var newWeb = blockedWeb
             var newDelay = delayMinutes
             for ((kind, payload, _) in due) when (kind) {
                 UB -> { newBlocked = newBlocked - payload; newInstallBlocked = newInstallBlocked - payload }
                 XR -> newExt = newExt - payload
+                WR -> newWeb = newWeb - payload
                 DD -> newDelay = payload.toLong()
             }
             sp.edit()
                 .putStringSet(K_BLOCKED, newBlocked)
                 .putStringSet(K_EXT, newExt)
                 .putStringSet(K_INSTALL_BLOCK, newInstallBlocked)
+                .putStringSet(K_WEB, newWeb)
                 .putLong(K_DELAY, newDelay)
                 .apply()
             savePending(rest)

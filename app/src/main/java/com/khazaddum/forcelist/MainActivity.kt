@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
@@ -95,7 +96,7 @@ class MainActivity : ComponentActivity() {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun ForcelistTheme(content: @Composable () -> Unit) {
+internal fun ForcelistTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val dark = isSystemInDarkTheme()
     val colors = when {
@@ -116,10 +117,12 @@ private data class Snapshot(
     val isDeviceOwner: Boolean,
     val blocked: Set<String>,
     val extensions: Set<String>,
+    val blockedWeb: Set<String>,
     val delayMinutes: Long,
     val pendingDelay: Pair<Long, Long>?,
     val pendingUnblock: Map<String, Long>,
     val pendingExtRemoval: Map<String, Long>,
+    val pendingWebRemoval: Map<String, Long>,
 )
 
 private data class AppInfo(
@@ -137,10 +140,12 @@ private fun buildSnapshot(context: Context): Snapshot {
         isDeviceOwner = report.isDeviceOwner,
         blocked = store.blocked,
         extensions = store.extensions,
+        blockedWeb = store.blockedWeb,
         delayMinutes = store.delayMinutes,
         pendingDelay = store.pendingDelay(),
         pendingUnblock = store.pendingUnblocks(),
         pendingExtRemoval = store.pendingExtRemovals(),
+        pendingWebRemoval = store.pendingWebRemovals(),
     )
 }
 
@@ -204,18 +209,25 @@ private fun ForcelistApp() {
             NavigationBar {
                 NavigationBarItem(
                     selected = tab == 0, onClick = { tab = 0 },
-                    icon = { Icon(Icons.Filled.Lock, null) }, label = { Text("Blocages") },
+                    icon = { Icon(Icons.Filled.Lock, null) }, label = { Text("Apps") },
                 )
                 NavigationBarItem(
                     selected = tab == 1, onClick = { tab = 1 },
+                    icon = { Icon(Icons.Filled.Home, null) }, label = { Text("Web") },
+                )
+                NavigationBarItem(
+                    selected = tab == 2, onClick = { tab = 2 },
                     icon = { Icon(Icons.Filled.Settings, null) }, label = { Text("Réglages") },
                 )
             }
         },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
-            if (tab == 0) BlocagesScreen(apps.value, snapshot, refresh)
-            else SettingsScreen(snapshot, refresh)
+            when (tab) {
+                0 -> BlocagesScreen(apps.value, snapshot, refresh)
+                1 -> WebScreen(snapshot, refresh)
+                else -> SettingsScreen(snapshot, refresh)
+            }
         }
     }
 }
@@ -332,6 +344,65 @@ private fun ToggleRow(
         },
         trailingContent = { Switch(checked = checked, onCheckedChange = onChange) },
     )
+}
+
+// ---------------------------------------------------------------------------
+// Onglet Web : ouvrir le navigateur + liste des sites/URL bloqués.
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun WebScreen(snap: Snapshot, refresh: () -> Unit) {
+    val context = LocalContext.current
+    val store = remember { Store.get(context) }
+    var input by rememberSaveable { mutableStateOf("") }
+
+    Column(Modifier.fillMaxSize()) {
+        OutlinedButton(
+            onClick = { context.startActivity(Intent(context, BrowserActivity::class.java)) },
+            modifier = Modifier.fillMaxWidth().padding(16.dp, 12.dp, 16.dp, 4.dp),
+        ) { Text("Ouvrir le navigateur") }
+
+        SectionHeader("Sites et URL bloqués")
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp, 0.dp, 16.dp, 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                modifier = Modifier.weight(1f),
+                label = { Text("Motif (ex. pornhub.com)") },
+                singleLine = true,
+            )
+            OutlinedButton(onClick = {
+                val p = input.trim()
+                if (p.isNotEmpty()) { store.blockWeb(p); input = ""; refresh() }
+            }) { Text("Bloquer") }
+        }
+
+        LazyColumn(Modifier.fillMaxSize()) {
+            items(snap.blockedWeb.sorted(), key = { "web:$it" }) { pattern ->
+                val pendingAt = snap.pendingWebRemoval[pattern]
+                ToggleRow(
+                    leading = { WebGlyph() },
+                    title = pattern,
+                    subtitle = "Refusé dans le navigateur",
+                    checked = pendingAt == null,
+                    pending = pendingAt?.let { "Retrait ${countdown(it)}" },
+                    onChange = { _ -> store.unblockWeb(pattern); refresh() },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WebGlyph() = Box(
+    Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+    Alignment.Center,
+) {
+    Icon(Icons.Filled.Home, null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(22.dp))
 }
 
 // ---------------------------------------------------------------------------
