@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Métadonnées requises par le DeviceAdminReceiver.
+  Les pouvoirs utilisés (setApplicationRestrictions, setUninstallBlocked,
+  setApplicationHidden) viennent du statut Device Owner, pas d'une policy listée ici,
+  donc <uses-policies> peut rester vide.
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+    </uses-policies>
+</device-admin>
