@@ -71,6 +71,17 @@
             </intent-filter>
         </receiver>
 
+        <!-- Pare-feu réseau (VPN local, filtrage DNS). Le Device Owner le pose en
+             always-on ; BIND_VPN_SERVICE restreint qui peut le lier. -->
+        <service
+            android:name=".FilterVpnService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>

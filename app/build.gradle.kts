@@ -22,8 +22,8 @@ android {
         applicationId = "com.khazaddum.forcelist"
         minSdk = 24
         targetSdk = 34
-        versionCode = 6
-        versionName = "6.0"
+        versionCode = 7
+        versionName = "7.0"
 
         // GeckoView embarque du natif par architecture. Sans filtre, l'APK pèse les
         // 4 ABI (~650 Mo). On garde l'arm64 du téléphone réel + le x86_64 de l'émulateur.

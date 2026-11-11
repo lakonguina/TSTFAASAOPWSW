@@ -118,6 +118,7 @@ private data class Snapshot(
     val blocked: Set<String>,
     val extensions: Set<String>,
     val blockedWeb: Set<String>,
+    val firewallEnabled: Boolean,
     val delayMinutes: Long,
     val pendingDelay: Pair<Long, Long>?,
     val pendingUnblock: Map<String, Long>,
@@ -141,6 +142,7 @@ private fun buildSnapshot(context: Context): Snapshot {
         blocked = store.blocked,
         extensions = store.extensions,
         blockedWeb = store.blockedWeb,
+        firewallEnabled = store.firewallEnabled,
         delayMinutes = store.delayMinutes,
         pendingDelay = store.pendingDelay(),
         pendingUnblock = store.pendingUnblocks(),
@@ -361,6 +363,16 @@ private fun WebScreen(snap: Snapshot, refresh: () -> Unit) {
             onClick = { context.startActivity(Intent(context, BrowserActivity::class.java)) },
             modifier = Modifier.fillMaxWidth().padding(16.dp, 12.dp, 16.dp, 4.dp),
         ) { Text("Ouvrir le navigateur") }
+
+        ToggleRow(
+            leading = { WebGlyph() },
+            title = "Filtrer tout le téléphone",
+            subtitle = if (snap.firewallEnabled) "Actif — les sites bloqués le sont partout"
+            else "Inactif — seul le navigateur filtre",
+            checked = snap.firewallEnabled,
+            pending = null,
+            onChange = { on -> PolicyManager.setFirewall(context, on); refresh() },
+        )
 
         SectionHeader("Sites et URL bloqués")
         Row(

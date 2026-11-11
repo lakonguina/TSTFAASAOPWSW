@@ -100,6 +100,25 @@ object PolicyManager {
         return PolicyReport(true, "✅ Device Owner actif.\n\n" + lines.joinToString("\n"))
     }
 
+    /**
+     * Active/désactive le pare-feu réseau. Device Owner : il pose l'app en VPN
+     * always-on sans dialogue de consentement.
+     *
+     * Phase de test : [lockdown] = false, donc une panne du filtre ne coupe PAS
+     * l'accès réseau. Une fois éprouvé, passer à true (plus aucun trafic hors VPN).
+     */
+    fun setFirewall(context: Context, enabled: Boolean, lockdown: Boolean = false) {
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val admin = AdminReceiver.componentName(context)
+        val pkg = context.packageName
+        if (!dpm.isDeviceOwnerApp(pkg)) return
+        runCatching {
+            if (enabled) dpm.setAlwaysOnVpnPackage(admin, pkg, lockdown)
+            else dpm.setAlwaysOnVpnPackage(admin, null, false)
+        }
+        Store.get(context).setFirewallEnabled(enabled)
+    }
+
     /** Programme (ou annule) un réveil inexact pour appliquer la prochaine attente échue. */
     private fun scheduleNext(context: Context, at: Long?) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager

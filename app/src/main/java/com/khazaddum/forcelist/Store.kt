@@ -24,6 +24,7 @@ class Store private constructor(private val sp: android.content.SharedPreference
         private const val K_EXT = "ext"
         private const val K_INSTALL_BLOCK = "installBlock"
         private const val K_WEB = "web"
+        private const val K_FW = "firewall"
         private const val K_PENDING = "pending"
         // Types d'action en attente, encodés "KIND\u001Fpayload\u001FeffectiveMillis".
         private const val UB = "UB" // débloquer une app     (payload = package)
@@ -49,6 +50,10 @@ class Store private constructor(private val sp: android.content.SharedPreference
 
     /** Motifs interdits dans le navigateur : une URL qui en contient un est refusée. */
     val blockedWeb: Set<String> get() = sp.getStringSet(K_WEB, emptySet())!!.toSet()
+
+    /** Pare-feu réseau actif ? (phase de test : bascule immédiate dans les deux sens). */
+    val firewallEnabled: Boolean get() = sp.getBoolean(K_FW, false)
+    fun setFirewallEnabled(on: Boolean) = sp.edit().putBoolean(K_FW, on).apply()
 
     private fun pending(): MutableList<Triple<String, String, Long>> =
         sp.getStringSet(K_PENDING, emptySet())!!.mapNotNull { s ->
