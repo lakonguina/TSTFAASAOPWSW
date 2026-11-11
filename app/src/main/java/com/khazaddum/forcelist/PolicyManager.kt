@@ -6,6 +6,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.UserManager
 
 data class PolicyReport(val isDeviceOwner: Boolean, val text: String)
 
@@ -64,8 +65,13 @@ object PolicyManager {
         }
         lines += "Extensions forcées : ${store.extensions.size}"
 
-        // Auto-protection.
+        // Auto-protection + fermeture des portes de sortie.
         runCatching { dpm.setUninstallBlocked(admin, pkg, true) }
+        // Démarrage « sans échec » interdit : sinon un reboot en safe mode désactive
+        // l'app (et plus tard le pare-feu), ouvrant une fenêtre sans aucun contrôle.
+        // NB : on n'ajoute PAS DISALLOW_DEBUGGING_FEATURES — ce serait couper adb,
+        // donc la seule sortie de secours voulue.
+        runCatching { dpm.addUserRestriction(admin, UserManager.DISALLOW_SAFE_BOOT) }
 
         scheduleNext(context, nextWake)
         if (nextWake != null) {

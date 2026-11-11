@@ -22,11 +22,13 @@ class Store private constructor(private val sp: android.content.SharedPreference
         private const val K_BLOCKED = "blocked"
         private const val K_KNOWN = "known"
         private const val K_EXT = "ext"
+        private const val K_INSTALL_BLOCK = "installBlock"
         private const val K_PENDING = "pending"
         // Types d'action en attente, encodés "KIND\u001Fpayload\u001FeffectiveMillis".
-        private const val UB = "UB" // débloquer une app     (payload = package)
-        private const val DD = "DD" // baisser le délai       (payload = minutes)
-        private const val XR = "XR" // retirer une extension  (payload = "id;url")
+        private const val UB = "UB" // débloquer une app          (payload = package)
+        private const val DD = "DD" // baisser le délai            (payload = minutes)
+        private const val XR = "XR" // retirer une extension       (payload = "id;url")
+        private const val AI = "AI" // autoriser à nouveau l'install (payload = package)
         private const val SEP = "\u001F"
     }
 
@@ -35,6 +37,10 @@ class Store private constructor(private val sp: android.content.SharedPreference
     val blocked: Set<String> get() = sp.getStringSet(K_BLOCKED, emptySet())!!.toSet()
     val known: Set<String> get() = sp.getStringSet(K_KNOWN, emptySet())!!.toSet()
     val extensions: Set<String> get() = sp.getStringSet(K_EXT, emptySet())!!.toSet()
+
+    /** Packages déclarés « jamais installables » : gelés dès qu'ils réapparaissent. */
+    val installBlocked: Set<String> get() = sp.getStringSet(K_INSTALL_BLOCK, emptySet())!!.toSet()
+    fun isInstallBlocked(pkg: String): Boolean = pkg in installBlocked
 
     private fun pending(): MutableList<Triple<String, String, Long>> =
         sp.getStringSet(K_PENDING, emptySet())!!.mapNotNull { s ->
@@ -84,6 +90,22 @@ class Store private constructor(private val sp: android.content.SharedPreference
         }
     }
 
+    // --- opérations installations ---
+    /** Déclarer un package « jamais installable » = serrer = immédiat. */
+    fun blockInstall(pkg: String) {
+        cancelPending(AI, pkg) // annuler une levée en attente (on resserre)
+        sp.edit().putStringSet(K_INSTALL_BLOCK, installBlocked + pkg).apply()
+    }
+
+    /** Lever l'interdiction = desserrer = seulement après le délai. */
+    fun allowInstall(pkg: String) {
+        if (delayMinutes <= 0L) {
+            sp.edit().putStringSet(K_INSTALL_BLOCK, installBlocked - pkg).apply()
+        } else if (pendingAt(AI, pkg) == null && pkg in installBlocked) {
+            savePending(pending() + Triple(AI, pkg, effective()))
+        }
+    }
+
     // --- opérations extensions ---
     fun addExtension(ext: String) {
         cancelPending(XR, ext)
@@ -115,15 +137,18 @@ class Store private constructor(private val sp: android.content.SharedPreference
         if (due.isNotEmpty()) {
             var newBlocked = blocked
             var newExt = extensions
+            var newInstallBlocked = installBlocked
             var newDelay = delayMinutes
             for ((kind, payload, _) in due) when (kind) {
                 UB -> newBlocked = newBlocked - payload
                 XR -> newExt = newExt - payload
+                AI -> newInstallBlocked = newInstallBlocked - payload
                 DD -> newDelay = payload.toLong()
             }
             sp.edit()
                 .putStringSet(K_BLOCKED, newBlocked)
                 .putStringSet(K_EXT, newExt)
+                .putStringSet(K_INSTALL_BLOCK, newInstallBlocked)
                 .putLong(K_DELAY, newDelay)
                 .apply()
             savePending(rest)

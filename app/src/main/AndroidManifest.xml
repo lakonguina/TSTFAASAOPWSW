@@ -43,6 +43,18 @@
             </intent-filter>
         </receiver>
 
+        <!-- Contrôle réactif des installations. PACKAGE_ADDED est exempté de la
+             restriction Android 8+ sur les broadcasts implicites : la déclaration en
+             manifeste est donc bien réveillée. -->
+        <receiver
+            android:name=".InstallGuard"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
