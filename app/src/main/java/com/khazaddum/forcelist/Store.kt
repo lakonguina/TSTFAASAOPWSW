@@ -25,10 +25,9 @@ class Store private constructor(private val sp: android.content.SharedPreference
         private const val K_INSTALL_BLOCK = "installBlock"
         private const val K_PENDING = "pending"
         // Types d'action en attente, encodés "KIND\u001Fpayload\u001FeffectiveMillis".
-        private const val UB = "UB" // débloquer une app          (payload = package)
-        private const val DD = "DD" // baisser le délai            (payload = minutes)
-        private const val XR = "XR" // retirer une extension       (payload = "id;url")
-        private const val AI = "AI" // autoriser à nouveau l'install (payload = package)
+        private const val UB = "UB" // débloquer une app     (payload = package)
+        private const val DD = "DD" // baisser le délai       (payload = minutes)
+        private const val XR = "XR" // retirer une extension  (payload = "id;url")
         private const val SEP = "\u001F"
     }
 
@@ -38,7 +37,11 @@ class Store private constructor(private val sp: android.content.SharedPreference
     val known: Set<String> get() = sp.getStringSet(K_KNOWN, emptySet())!!.toSet()
     val extensions: Set<String> get() = sp.getStringSet(K_EXT, emptySet())!!.toSet()
 
-    /** Packages déclarés « jamais installables » : gelés dès qu'ils réapparaissent. */
+    /**
+     * Packages qu'on ne veut pas voir revenir : une app bloquée l'est aussi, pour
+     * qu'une désinstallation/réinstallation ne serve pas de contournement. Lu par
+     * [InstallGuard] qui re-gèle le package dès qu'il réapparaît.
+     */
     val installBlocked: Set<String> get() = sp.getStringSet(K_INSTALL_BLOCK, emptySet())!!.toSet()
     fun isInstallBlocked(pkg: String): Boolean = pkg in installBlocked
 
@@ -74,35 +77,25 @@ class Store private constructor(private val sp: android.content.SharedPreference
         savePending(pending().filterNot { it.first == kind && it.second == payload })
 
     // --- opérations apps ---
+    // Bloquer une app = la geler maintenant ET empêcher son retour par réinstallation.
+    // Les deux facettes suivent la même intention et le même engagement.
     fun block(pkg: String) {
         cancelPending(UB, pkg) // annuler un éventuel déblocage en attente (on resserre)
         sp.edit()
             .putStringSet(K_BLOCKED, blocked + pkg)
+            .putStringSet(K_INSTALL_BLOCK, installBlocked + pkg)
             .putStringSet(K_KNOWN, known + pkg)
             .apply()
     }
 
     fun unblock(pkg: String) {
         if (delayMinutes <= 0L) {
-            sp.edit().putStringSet(K_BLOCKED, blocked - pkg).apply()
+            sp.edit()
+                .putStringSet(K_BLOCKED, blocked - pkg)
+                .putStringSet(K_INSTALL_BLOCK, installBlocked - pkg)
+                .apply()
         } else if (pendingUnblockAt(pkg) == null && pkg in blocked) {
             savePending(pending() + Triple(UB, pkg, effective()))
-        }
-    }
-
-    // --- opérations installations ---
-    /** Déclarer un package « jamais installable » = serrer = immédiat. */
-    fun blockInstall(pkg: String) {
-        cancelPending(AI, pkg) // annuler une levée en attente (on resserre)
-        sp.edit().putStringSet(K_INSTALL_BLOCK, installBlocked + pkg).apply()
-    }
-
-    /** Lever l'interdiction = desserrer = seulement après le délai. */
-    fun allowInstall(pkg: String) {
-        if (delayMinutes <= 0L) {
-            sp.edit().putStringSet(K_INSTALL_BLOCK, installBlocked - pkg).apply()
-        } else if (pendingAt(AI, pkg) == null && pkg in installBlocked) {
-            savePending(pending() + Triple(AI, pkg, effective()))
         }
     }
 
@@ -140,9 +133,8 @@ class Store private constructor(private val sp: android.content.SharedPreference
             var newInstallBlocked = installBlocked
             var newDelay = delayMinutes
             for ((kind, payload, _) in due) when (kind) {
-                UB -> newBlocked = newBlocked - payload
+                UB -> { newBlocked = newBlocked - payload; newInstallBlocked = newInstallBlocked - payload }
                 XR -> newExt = newExt - payload
-                AI -> newInstallBlocked = newInstallBlocked - payload
                 DD -> newDelay = payload.toLong()
             }
             sp.edit()
