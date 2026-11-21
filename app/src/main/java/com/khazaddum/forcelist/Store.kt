@@ -19,6 +19,7 @@ class Store private constructor(internal val sp: SharedPreferences) {
 
     internal val pending = PendingQueue(sp)
     private val historyStore = BrowsingHistory(sp)
+    private val browserState = BrowserState(sp)
 
     private fun set(key: String) = sp.getStringSet(key, emptySet())!!.toSet()
     internal fun putSets(vararg e: Pair<String, Set<String>>) =
@@ -40,6 +41,11 @@ class Store private constructor(internal val sp: SharedPreferences) {
     /** Faux tant que le dégel des orphelins post-réinstallation n'a pas tourné. */
     val repaired: Boolean get() = sp.getBoolean(K_REPAIRED, false)
     fun markRepaired() = sp.edit().putBoolean(K_REPAIRED, true).apply()
+
+    // --- onglets ouverts (délégués) ---
+    fun savedTabs(): List<String> = browserState.tabs()
+    fun savedTabIndex(): Int = browserState.currentIndex()
+    fun saveTabs(urls: List<String>, current: Int) = browserState.save(urls, current)
 
     // --- historique (délégué) ---
     fun history(): List<String> = historyStore.entries()

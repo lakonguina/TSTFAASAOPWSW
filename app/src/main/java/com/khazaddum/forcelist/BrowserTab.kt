@@ -17,6 +17,7 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
     var progress by mutableIntStateOf(0)
     var canGoBack by mutableStateOf(false)
     var canGoForward by mutableStateOf(false)
+    var blocked by mutableStateOf<String?>(null) // URL refusée à afficher, sinon null
 
     init {
         session.navigationDelegate = object : GeckoSession.NavigationDelegate {
@@ -26,8 +27,12 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
                 perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>,
                 hasUserGesture: Boolean,
             ) {
+                // Attrape aussi les navigations d'une SPA (ex. X/Twitter via pushState),
+                // qui ne passent PAS par onLoadRequest : ici on réagit après coup.
                 url = locationUri ?: ""
-                locationUri?.let { store.addHistory(it) }
+                val hit = locationUri != null && store.blockedWeb.any { UrlRules.matchesUrl(locationUri, it) }
+                blocked = if (hit) locationUri else null
+                if (!hit) locationUri?.let { store.addHistory(it) }
             }
 
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
@@ -42,8 +47,9 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
                 session: GeckoSession,
                 request: GeckoSession.NavigationDelegate.LoadRequest,
             ): GeckoResult<AllowOrDeny> {
-                val blocked = store.blockedWeb.any { request.uri.contains(it, ignoreCase = true) }
-                return GeckoResult.fromValue(if (blocked) AllowOrDeny.DENY else AllowOrDeny.ALLOW)
+                val hit = store.blockedWeb.any { UrlRules.matchesUrl(request.uri, it) }
+                if (hit) blocked = request.uri
+                return GeckoResult.fromValue(if (hit) AllowOrDeny.DENY else AllowOrDeny.ALLOW)
             }
         }
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
@@ -61,4 +67,9 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
 
     fun load(input: String) = session.loadUri(BrowserActivity.normalize(input))
     fun close() = session.close()
+
+    /** Quitte une page bloquée : revient en arrière, ou charge l'accueil si impossible. */
+    fun leaveBlocked() {
+        if (canGoBack) session.goBack() else { load(BrowserActivity.HOME); blocked = null }
+    }
 }
