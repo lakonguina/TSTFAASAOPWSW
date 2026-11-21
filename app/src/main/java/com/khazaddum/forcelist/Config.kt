@@ -7,6 +7,13 @@ object Config {
     /** Navigateur qui applique `ExtensionInstallForcelist`. Edge honore cette policy. */
     const val targetBrowser = "com.microsoft.emmx"
 
+    /**
+     * Dépôt GitHub PUBLIC d'où l'app se met à jour toute seule (OWNER/REPO).
+     * L'updater lit `releases/latest` et installe l'APK si le tag `vN` dépasse
+     * [BuildConfig.VERSION_CODE]. À corriger si le dépôt change.
+     */
+    const val githubRepo = "lakonguina/khazad-dum"
+
     /** URL de mise à jour des extensions Edge, collée après le `;`. */
     const val EDGE_UPDATE_URL = "https://edge.microsoft.com/extensionwebstorebase/v1/crx"
 

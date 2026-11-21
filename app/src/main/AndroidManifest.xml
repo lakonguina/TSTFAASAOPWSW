@@ -2,14 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Mise à jour auto depuis GitHub : télécharger l'APK puis l'installer. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Device Owner qui doit pouvoir lister et bloquer n'importe quelle app :
          sans ça, Android 11+ ne laisse voir qu'une poignée de packages. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
     <application
         android:allowBackup="false"
-        android:label="ForceList"
-        android:testOnly="true"
+        android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Forcelist">
 
@@ -27,7 +28,7 @@
         <activity
             android:name=".BrowserActivity"
             android:exported="true"
-            android:label="ForceList"
+            android:label="@string/app_name"
             android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -70,6 +71,11 @@
                 <data android:scheme="package" />
             </intent-filter>
         </receiver>
+
+        <!-- Résultat d'installation de la mise à jour (PackageInstaller.commit). -->
+        <receiver
+            android:name=".UpdateReceiver"
+            android:exported="false" />
 
         <!-- Pare-feu réseau (VPN local, filtrage DNS). Le Device Owner le pose en
              always-on ; BIND_VPN_SERVICE restreint qui peut le lier. -->

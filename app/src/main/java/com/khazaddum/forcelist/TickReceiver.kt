@@ -8,5 +8,6 @@ import android.content.Intent
 class TickReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         PolicyManager.reconcile(context)
+        Updater.checkInBackground(context) // vérifie GitHub au boot et à chaque échéance
     }
 }

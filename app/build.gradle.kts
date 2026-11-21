@@ -22,13 +22,14 @@ android {
         applicationId = "com.khazaddum.forcelist"
         minSdk = 24
         targetSdk = 34
-        versionCode = 7
-        versionName = "7.0"
+        // En CI : ./gradlew assembleRelease -PversionCode=8 (dérivé du tag vN).
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 7
+        versionName = ((project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 7).toString()
 
-        // GeckoView embarque du natif par architecture. Sans filtre, l'APK pèse les
-        // 4 ABI (~650 Mo). On garde l'arm64 du téléphone réel + le x86_64 de l'émulateur.
-        // (Pour une diffusion propre : splits par ABI ou App Bundle.)
-        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+        // GeckoView embarque du natif par architecture. On ne garde que l'arm64 du
+        // téléphone réel : l'APK release (téléchargé à chaque mise à jour) reste moitié
+        // moins lourd. Le x86_64 de l'émulateur est ajouté au seul build debug ci-dessous.
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     signingConfigs {
@@ -43,6 +44,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            ndk { abiFilters += "x86_64" } // émulateur, debug seulement
+        }
         release {
             isMinifyEnabled = false
             if (hasReleaseKeystore) signingConfig = signingConfigs.getByName("release")
@@ -59,6 +63,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true // expose BuildConfig.VERSION_CODE à l'updater
     }
     composeOptions {
         // Compilateur Compose compatible Kotlin 1.9.24.

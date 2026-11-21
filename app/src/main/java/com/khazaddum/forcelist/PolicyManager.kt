@@ -1,7 +1,5 @@
 package com.khazaddum.forcelist
 
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -12,43 +10,53 @@ import android.os.UserManager
 
 data class PolicyReport(val isDeviceOwner: Boolean, val text: String)
 
+/**
+ * Mûrit les attentes échues, puis pousse l'état voulu de [Store] vers l'appareil.
+ * Idempotent et réparateur : rappelable à volonté (ouverture d'app, alarme, boot).
+ */
 object PolicyManager {
 
     private const val FORCELIST_KEY = "ExtensionInstallForcelist"
-    const val ACTION_TICK = "com.khazaddum.forcelist.TICK"
-    private const val ALARM_ID = 1001
 
-    /**
-     * Mûrit les attentes échues, puis pousse l'état voulu de [Store] vers l'appareil.
-     * Idempotent et réparateur : rappelable à volonté (ouverture d'app, alarme, boot).
-     */
     fun reconcile(context: Context): PolicyReport {
         val store = Store.get(context)
         val nextWake = store.mature()
-
         val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val admin = AdminReceiver.componentName(context)
         val pkg = context.packageName
+        if (!dpm.isDeviceOwnerApp(pkg)) return notOwnerReport(pkg)
 
-        if (!dpm.isDeviceOwnerApp(pkg)) {
-            return PolicyReport(false, buildString {
-                appendLine("⛔ Pas Device Owner.")
-                appendLine()
-                appendLine("Sur un téléphone réinitialisé, sans compte Google :")
-                appendLine("adb shell dpm set-device-owner $pkg/.AdminReceiver")
-            })
-        }
-
-        val blocked = store.blocked
         val lines = mutableListOf<String>()
+        if (!store.repaired) { // dégel unique des orphelins après une réinstallation
+            OrphanRepair.run(dpm, admin, context.packageManager, store.blocked, pkg)
+            store.markRepaired()
+        }
+        applyAppBlocks(dpm, admin, store, lines)
+        applyExtensions(dpm, admin, store, lines)
+        hardenAndDefaultBrowser(dpm, admin, pkg, lines)
+        PolicyAlarm.schedule(context, nextWake)
+        if (nextWake != null) {
+            val mins = ((nextWake - System.currentTimeMillis()) / 60_000L).coerceAtLeast(0)
+            lines += "Prochaine échéance dans ~$mins min"
+        }
+        return PolicyReport(true, "✅ Device Owner actif.\n\n" + lines.joinToString("\n"))
+    }
 
-        // Pour chaque app gérée : masquée (invisible) ET suspendue (gelée, non lançable
-        // même si elle tournait déjà ou est atteinte par un lien). Les deux, pour qu'une
-        // app bloquée ne puisse pas être rouverte. Ordre : on suspend tant qu'elle est
-        // visible, puis on masque ; au déblocage, on démasque puis on lève la suspension.
+    private fun notOwnerReport(pkg: String) = PolicyReport(false, buildString {
+        appendLine("⛔ Pas Device Owner.")
+        appendLine()
+        appendLine("Sur un téléphone réinitialisé, sans compte Google :")
+        appendLine("adb shell dpm set-device-owner $pkg/.AdminReceiver")
+    })
+
+    // Chaque app gérée : masquée (invisible) ET suspendue (gelée), pour qu'une app
+    // bloquée ne soit pas rouvrable. Au déblocage : l'inverse.
+    private fun applyAppBlocks(
+        dpm: DevicePolicyManager, admin: ComponentName, store: Store, lines: MutableList<String>,
+    ) {
+        val blocked = store.blocked
         for (p in store.known) {
-            val block = p in blocked
-            if (block) {
+            if (p in blocked) {
                 runCatching { dpm.setPackagesSuspended(admin, arrayOf(p), true) }
                 runCatching { dpm.setApplicationHidden(admin, p, true) }
             } else {
@@ -57,8 +65,11 @@ object PolicyManager {
             }
         }
         lines += "Apps bloquées : ${blocked.size}"
+    }
 
-        // Extensions forcées dans le navigateur.
+    private fun applyExtensions(
+        dpm: DevicePolicyManager, admin: ComponentName, store: Store, lines: MutableList<String>,
+    ) {
         runCatching {
             dpm.setApplicationRestrictions(
                 admin, Config.targetBrowser,
@@ -66,17 +77,14 @@ object PolicyManager {
             )
         }
         lines += "Extensions forcées : ${store.extensions.size}"
+    }
 
-        // Auto-protection + fermeture des portes de sortie.
+    private fun hardenAndDefaultBrowser(
+        dpm: DevicePolicyManager, admin: ComponentName, pkg: String, lines: MutableList<String>,
+    ) {
         runCatching { dpm.setUninstallBlocked(admin, pkg, true) }
-        // Démarrage « sans échec » interdit : sinon un reboot en safe mode désactive
-        // l'app (et plus tard le pare-feu), ouvrant une fenêtre sans aucun contrôle.
-        // NB : on n'ajoute PAS DISALLOW_DEBUGGING_FEATURES — ce serait couper adb,
-        // donc la seule sortie de secours voulue.
+        // Safe boot interdit : sinon un reboot en safe mode désactiverait tout contrôle.
         runCatching { dpm.addUserRestriction(admin, UserManager.DISALLOW_SAFE_BOOT) }
-
-        // Navigateur par défaut non contournable : tout lien http/https ouvre notre
-        // navigateur. On repart à zéro puis on repose la règle (idempotent).
         runCatching {
             dpm.clearPackagePersistentPreferredActivities(admin, pkg)
             val web = IntentFilter(Intent.ACTION_VIEW).apply {
@@ -85,49 +93,8 @@ object PolicyManager {
                 addDataScheme("http")
                 addDataScheme("https")
             }
-            dpm.addPersistentPreferredActivity(
-                admin, web, ComponentName(pkg, "$pkg.BrowserActivity"),
-            )
+            dpm.addPersistentPreferredActivity(admin, web, ComponentName(pkg, "$pkg.BrowserActivity"))
         }
         lines += "Navigateur par défaut : imposé"
-
-        scheduleNext(context, nextWake)
-        if (nextWake != null) {
-            val mins = ((nextWake - System.currentTimeMillis()) / 60_000L).coerceAtLeast(0)
-            lines += "Prochaine échéance dans ~$mins min"
-        }
-
-        return PolicyReport(true, "✅ Device Owner actif.\n\n" + lines.joinToString("\n"))
-    }
-
-    /**
-     * Active/désactive le pare-feu réseau. Device Owner : il pose l'app en VPN
-     * always-on sans dialogue de consentement.
-     *
-     * Phase de test : [lockdown] = false, donc une panne du filtre ne coupe PAS
-     * l'accès réseau. Une fois éprouvé, passer à true (plus aucun trafic hors VPN).
-     */
-    fun setFirewall(context: Context, enabled: Boolean, lockdown: Boolean = false) {
-        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        val admin = AdminReceiver.componentName(context)
-        val pkg = context.packageName
-        if (!dpm.isDeviceOwnerApp(pkg)) return
-        runCatching {
-            if (enabled) dpm.setAlwaysOnVpnPackage(admin, pkg, lockdown)
-            else dpm.setAlwaysOnVpnPackage(admin, null, false)
-        }
-        Store.get(context).setFirewallEnabled(enabled)
-    }
-
-    /** Programme (ou annule) un réveil inexact pour appliquer la prochaine attente échue. */
-    private fun scheduleNext(context: Context, at: Long?) {
-        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val pi = PendingIntent.getBroadcast(
-            context, ALARM_ID,
-            Intent(context, TickReceiver::class.java).setAction(ACTION_TICK),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        if (at == null) am.cancel(pi)
-        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi) // inexact : pas de permission, et non contournable à la minute
     }
 }
