@@ -29,6 +29,12 @@ class BrowserActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        recreate() // nouvelle intention VIEW : recharge le navigateur sur cette URL
+    }
+
     companion object {
         const val HOME = "https://duckduckgo.com"
 

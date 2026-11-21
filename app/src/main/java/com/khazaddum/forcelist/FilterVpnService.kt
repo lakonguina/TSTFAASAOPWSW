@@ -32,13 +32,16 @@ class FilterVpnService : VpnService() {
     }
 
     private fun start() {
-        val pfd = Builder()
+        val builder = Builder()
             .setSession("Khazad-dûm")
             .addAddress(VIRT_ADDR, 32)
             .addDnsServer(VIRT_DNS)
             .addRoute(VIRT_DNS, 32) // seules les requêtes vers notre DNS passent par le tunnel
             .setBlocking(true)
-            .establish() ?: return
+        // On s'exclut nous-mêmes : notre navigateur filtre déjà par URL, et notre trafic
+        // (navigateur, updater) ne doit pas être capté par le tunnel (sinon il est coupé).
+        runCatching { builder.addDisallowedApplication(packageName) }
+        val pfd = builder.establish() ?: return
         tun = pfd
         running = true
         worker = Thread { loop(pfd.fileDescriptor) }.apply { isDaemon = true; start() }

@@ -19,8 +19,10 @@ object DnsFilter {
         val dnsStart = ihl + 8
         if (dnsStart >= len) return
 
-        val domain = DnsPacket.question(pkt, dnsStart, len) ?: return
-        val isBlocked = blocked.any { domain.contains(it, ignoreCase = true) }
+        // Niveau DNS = domaine seulement. Un motif URL (ex. https://x.com/path) bloque
+        // ici son hôte entier (x.com) ; le filtrage par chemin reste au navigateur maison.
+        val domain = (DnsPacket.question(pkt, dnsStart, len) ?: return).lowercase()
+        val isBlocked = blocked.any { blocksDomain(domain, hostOf(it)) }
 
         // On inverse source <-> destination pour construire la réponse.
         val srcIp = pkt.copyOfRange(12, 16)
@@ -34,6 +36,16 @@ object DnsFilter {
         }
         out.write(DnsPacket.buildUdpReply(dstIp, srcIp, srcPort, dnsResponse))
     }
+
+    /** Hôte d'un motif : retire le schéma, le chemin, la query et le port éventuels. */
+    private fun hostOf(pattern: String): String {
+        val s = pattern.trim().lowercase()
+        return s.substringAfter("://", s).substringBefore('/').substringBefore('?').substringBefore(':')
+    }
+
+    /** Vrai si [domain] est [host] ou un de ses sous-domaines. */
+    private fun blocksDomain(domain: String, host: String): Boolean =
+        host.isNotEmpty() && (domain == host || domain.endsWith(".$host"))
 
     /** Relaie la requête vers le résolveur amont et renvoie sa réponse brute. */
     private fun resolve(query: ByteArray, socket: DatagramSocket): ByteArray? {
