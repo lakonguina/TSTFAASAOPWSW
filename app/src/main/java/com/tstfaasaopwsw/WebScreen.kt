@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-/** Onglet Web : ouvrir le navigateur, basculer le pare-feu, gérer les motifs bloqués. */
+/** Web tab: toggle the firewall and manage blocked patterns. */
 @Composable
 internal fun WebScreen(snap: Snapshot, refresh: () -> Unit) {
     val context = LocalContext.current
@@ -32,15 +32,15 @@ internal fun WebScreen(snap: Snapshot, refresh: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         ToggleRow(
             leading = { WebGlyph() },
-            title = "Filtrer tout le téléphone",
-            subtitle = if (snap.firewallEnabled) "Actif — les sites bloqués le sont partout"
-            else "Inactif — seul le navigateur filtre",
+            title = "Filter the whole phone",
+            subtitle = if (snap.firewallEnabled) "On — blocked sites are blocked everywhere"
+            else "Off — only the browser filters",
             checked = snap.firewallEnabled,
             pending = null,
             onChange = { on -> FirewallPolicy.setFirewall(context, on); refresh() },
         )
 
-        SectionHeader("Sites et URL bloqués")
+        SectionHeader("Blocked sites and URLs")
         Row(
             Modifier.fillMaxWidth().padding(16.dp, 0.dp, 16.dp, 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -50,13 +50,13 @@ internal fun WebScreen(snap: Snapshot, refresh: () -> Unit) {
                 value = input,
                 onValueChange = { input = it },
                 modifier = Modifier.weight(1f),
-                label = { Text("Motif (ex. pornhub.com)") },
+                label = { Text("Pattern (e.g. pornhub.com)") },
                 singleLine = true,
             )
             OutlinedButton(onClick = {
                 val p = input.trim()
                 if (p.isNotEmpty()) { store.blockWeb(p); input = ""; refresh() }
-            }) { Text("Bloquer") }
+            }) { Text("Block") }
         }
 
         LazyColumn(Modifier.fillMaxSize()) {
@@ -65,9 +65,9 @@ internal fun WebScreen(snap: Snapshot, refresh: () -> Unit) {
                 ToggleRow(
                     leading = { WebGlyph() },
                     title = pattern,
-                    subtitle = "Refusé dans le navigateur",
+                    subtitle = "Refused in the browser",
                     checked = pendingAt == null,
-                    pending = pendingAt?.let { "Retrait ${countdown(it)}" },
+                    pending = pendingAt?.let { "Removal ${countdown(it)}" },
                     onChange = { on -> if (on) store.blockWeb(pattern) else store.unblockWeb(pattern); refresh() },
                 )
             }

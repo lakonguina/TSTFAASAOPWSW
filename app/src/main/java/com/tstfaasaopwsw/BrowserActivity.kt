@@ -11,9 +11,9 @@ import androidx.compose.ui.Modifier
 import org.mozilla.geckoview.GeckoRuntime
 
 /**
- * Navigateur embarqué (GeckoView), imposé comme navigateur par défaut. Un filtre consulte
- * [Store] à chaque navigation et refuse les URL contenant un motif bloqué (voir [BrowserTab]).
- * La boucle d'UI (onglets, overlays) vit dans [Browser].
+ * Embedded browser (GeckoView), enforced as the default browser. A filter consults
+ * [Store] on every navigation and refuses URLs containing a blocked pattern (see [BrowserTab]).
+ * The UI loop (tabs, overlays) lives in [Browser].
  */
 class BrowserActivity : ComponentActivity() {
 
@@ -32,20 +32,20 @@ class BrowserActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        recreate() // nouvelle intention VIEW : recharge le navigateur sur cette URL
+        recreate() // new VIEW intent: reloads the browser on this URL
     }
 
     companion object {
         const val HOME = "https://www.google.com"
 
-        // Un seul GeckoRuntime par processus (lourd), partagé par toutes les sessions.
+        // A single GeckoRuntime per process (heavy), shared by all sessions.
         @Volatile private var runtime: GeckoRuntime? = null
         fun runtime(ctx: Context): GeckoRuntime =
             runtime ?: synchronized(this) {
                 runtime ?: GeckoRuntime.create(ctx.applicationContext).also { runtime = it }
             }
 
-        /** Barre d'adresse : URL telle quelle, sinon complétée, sinon recherche. */
+        /** Address bar: URL as-is, otherwise completed, otherwise a search. */
         fun normalize(input: String): String {
             val s = input.trim()
             return when {

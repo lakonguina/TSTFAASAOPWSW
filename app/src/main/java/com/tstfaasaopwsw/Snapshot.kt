@@ -10,18 +10,16 @@ import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Vue immuable de l'état, reconstruite à chaque « tick » de l'UI. */
+/** Immutable view of the state, rebuilt on every UI "tick". */
 internal data class Snapshot(
     val statusText: String,
     val isDeviceOwner: Boolean,
     val blocked: Set<String>,
-    val extensions: Set<String>,
     val blockedWeb: Set<String>,
     val firewallEnabled: Boolean,
     val delayMinutes: Long,
     val pendingDelay: Pair<Long, Long>?,
     val pendingUnblock: Map<String, Long>,
-    val pendingExtRemoval: Map<String, Long>,
     val pendingWebRemoval: Map<String, Long>,
 )
 
@@ -39,20 +37,18 @@ internal fun buildSnapshot(context: Context): Snapshot {
         statusText = report.text,
         isDeviceOwner = report.isDeviceOwner,
         blocked = store.blocked,
-        extensions = store.extensions,
         blockedWeb = store.blockedWeb,
         firewallEnabled = store.firewallEnabled,
         delayMinutes = store.delayMinutes,
         pendingDelay = store.pendingDelay(),
         pendingUnblock = store.pendingUnblocks(),
-        pendingExtRemoval = store.pendingExtRemovals(),
         pendingWebRemoval = store.pendingWebRemovals(),
     )
 }
 
 /**
- * Apps que l'utilisateur reconnaît : celles lançables (icône dans le tiroir) plus celles
- * déjà gérées (pour les débloquer même masquées). Pas les centaines de services système.
+ * Apps the user recognizes: the launchable ones (icon in the drawer) plus those already
+ * managed (so they can be unblocked even when hidden). Not the hundreds of system services.
  */
 internal suspend fun loadApps(context: Context): List<AppInfo> = withContext(Dispatchers.IO) {
     val pm = context.packageManager

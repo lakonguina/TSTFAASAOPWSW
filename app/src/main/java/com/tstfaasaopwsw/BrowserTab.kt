@@ -9,7 +9,7 @@ import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 
-/** Un onglet : une session GeckoView + son état observable par l'UI, et le filtre d'URL. */
+/** A tab: a GeckoView session + its UI-observable state, and the URL filter. */
 internal class Tab(runtime: GeckoRuntime, store: Store) {
     val session = GeckoSession()
     var url by mutableStateOf(BrowserActivity.HOME)
@@ -17,7 +17,7 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
     var progress by mutableIntStateOf(0)
     var canGoBack by mutableStateOf(false)
     var canGoForward by mutableStateOf(false)
-    var blocked by mutableStateOf<String?>(null) // URL refusée à afficher, sinon null
+    var blocked by mutableStateOf<String?>(null) // refused URL to show, otherwise null
 
     init {
         session.navigationDelegate = object : GeckoSession.NavigationDelegate {
@@ -27,8 +27,8 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
                 perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>,
                 hasUserGesture: Boolean,
             ) {
-                // Attrape aussi les navigations d'une SPA (ex. X/Twitter via pushState),
-                // qui ne passent PAS par onLoadRequest : ici on réagit après coup.
+                // Also catches SPA navigations (e.g. X/Twitter via pushState),
+                // that do NOT go through onLoadRequest: here we react afterwards.
                 url = locationUri ?: ""
                 val hit = locationUri != null && store.blockedWeb.any { UrlRules.matchesUrl(locationUri, it) }
                 blocked = if (hit) locationUri else null
@@ -68,7 +68,7 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
     fun load(input: String) = session.loadUri(BrowserActivity.normalize(input))
     fun close() = session.close()
 
-    /** Quitte une page bloquée : revient en arrière, ou charge l'accueil si impossible. */
+    /** Leaves a blocked page: goes back, or loads home if not possible. */
     fun leaveBlocked() {
         if (canGoBack) session.goBack() else { load(BrowserActivity.HOME); blocked = null }
     }

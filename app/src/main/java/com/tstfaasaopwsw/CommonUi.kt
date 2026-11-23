@@ -8,7 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.style.TextOverflow
 
-/** Ligne générique : icône + titre + sous-titre (+ compte à rebours) + interrupteur. */
+/** Generic row: icon + title + subtitle (+ countdown) + switch. */
 @Composable
 internal fun ToggleRow(
     leading: @Composable () -> Unit,
@@ -30,7 +30,7 @@ internal fun ToggleRow(
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
                 if (pending != null) Text(
-                    "$pending (toujours verrouillé en attendant)",
+                    "$pending (still locked until then)",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -40,13 +40,13 @@ internal fun ToggleRow(
     )
 }
 
-/** "dans 2 h 5 min" / "dans 9 min" / "dans moins d'1 min". */
+/** "in 2 h 5 min" / "in 9 min" / "in less than 1 min". */
 internal fun countdown(at: Long): String {
     val totalMin = ((at - System.currentTimeMillis()) / 60_000L)
     return when {
-        totalMin <= 0L -> "dans moins d'1 min"
-        totalMin < 60L -> "dans $totalMin min"
-        totalMin % 60L == 0L -> "dans ${totalMin / 60} h"
-        else -> "dans ${totalMin / 60} h ${totalMin % 60} min"
+        totalMin <= 0L -> "in less than 1 min"
+        totalMin < 60L -> "in $totalMin min"
+        totalMin % 60L == 0L -> "in ${totalMin / 60} h"
+        else -> "in ${totalMin / 60} h ${totalMin % 60} min"
     }
 }

@@ -9,7 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 
-/** Racine : springboard d'accueil, puis Navigateur (activité) ou Blocage (sous-écran). */
+/** Root: home springboard, then Browser (activity) or Blocking (sub-screen). */
 @Composable
 internal fun AppRoot() {
     val context = LocalContext.current
@@ -18,10 +18,10 @@ internal fun AppRoot() {
     if (atHome) {
         HomeScreen(
             onBrowser = { context.startActivity(Intent(context, BrowserActivity::class.java)) },
-            onBlocage = { atHome = false },
+            onBlocking = { atHome = false },
         )
     } else {
         BackHandler { atHome = true }
-        BlocageHost(onHome = { atHome = true })
+        BlockHost(onHome = { atHome = true })
     }
 }

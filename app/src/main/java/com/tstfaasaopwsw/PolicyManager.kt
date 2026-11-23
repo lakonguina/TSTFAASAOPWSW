@@ -5,18 +5,15 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Bundle
 import android.os.UserManager
 
 data class PolicyReport(val isDeviceOwner: Boolean, val text: String)
 
 /**
- * Mûrit les attentes échues, puis pousse l'état voulu de [Store] vers l'appareil.
- * Idempotent et réparateur : rappelable à volonté (ouverture d'app, alarme, boot).
+ * Matures due pending actions, then pushes the desired [Store] state to the device.
+ * Idempotent and self-healing: callable at will (app open, alarm, boot).
  */
 object PolicyManager {
-
-    private const val FORCELIST_KEY = "ExtensionInstallForcelist"
 
     fun reconcile(context: Context): PolicyReport {
         val store = Store.get(context)
@@ -27,30 +24,29 @@ object PolicyManager {
         if (!dpm.isDeviceOwnerApp(pkg)) return notOwnerReport(pkg)
 
         val lines = mutableListOf<String>()
-        if (!store.repaired) { // dégel unique des orphelins après une réinstallation
+        if (!store.repaired) { // one-time orphan thaw after a reinstall
             OrphanRepair.run(dpm, admin, context.packageManager, store.blocked, pkg)
             store.markRepaired()
         }
         applyAppBlocks(dpm, admin, store, lines)
-        applyExtensions(dpm, admin, store, lines)
         hardenAndDefaultBrowser(dpm, admin, pkg, lines)
         PolicyAlarm.schedule(context, nextWake)
         if (nextWake != null) {
             val mins = ((nextWake - System.currentTimeMillis()) / 60_000L).coerceAtLeast(0)
-            lines += "Prochaine échéance dans ~$mins min"
+            lines += "Next due in ~$mins min"
         }
-        return PolicyReport(true, "✅ Device Owner actif.\n\n" + lines.joinToString("\n"))
+        return PolicyReport(true, "✅ Device Owner active.\n\n" + lines.joinToString("\n"))
     }
 
     private fun notOwnerReport(pkg: String) = PolicyReport(false, buildString {
-        appendLine("⛔ Pas Device Owner.")
+        appendLine("⛔ Not Device Owner.")
         appendLine()
-        appendLine("Sur un téléphone réinitialisé, sans compte Google :")
+        appendLine("On a reset phone, with no Google account:")
         appendLine("adb shell dpm set-device-owner $pkg/.AdminReceiver")
     })
 
-    // Chaque app gérée : masquée (invisible) ET suspendue (gelée), pour qu'une app
-    // bloquée ne soit pas rouvrable. Au déblocage : l'inverse.
+    // Each managed app: hidden (invisible) AND suspended (frozen), so a blocked app
+    // can't be reopened. On unblock: the reverse.
     private fun applyAppBlocks(
         dpm: DevicePolicyManager, admin: ComponentName, store: Store, lines: MutableList<String>,
     ) {
@@ -64,26 +60,14 @@ object PolicyManager {
                 runCatching { dpm.setPackagesSuspended(admin, arrayOf(p), false) }
             }
         }
-        lines += "Apps bloquées : ${blocked.size}"
-    }
-
-    private fun applyExtensions(
-        dpm: DevicePolicyManager, admin: ComponentName, store: Store, lines: MutableList<String>,
-    ) {
-        runCatching {
-            dpm.setApplicationRestrictions(
-                admin, Config.targetBrowser,
-                Bundle().apply { putStringArray(FORCELIST_KEY, store.extensions.toTypedArray()) },
-            )
-        }
-        lines += "Extensions forcées : ${store.extensions.size}"
+        lines += "Blocked apps: ${blocked.size}"
     }
 
     private fun hardenAndDefaultBrowser(
         dpm: DevicePolicyManager, admin: ComponentName, pkg: String, lines: MutableList<String>,
     ) {
         runCatching { dpm.setUninstallBlocked(admin, pkg, true) }
-        // Safe boot interdit : sinon un reboot en safe mode désactiverait tout contrôle.
+        // Safe boot disabled: otherwise a safe-mode reboot would disable all control.
         runCatching { dpm.addUserRestriction(admin, UserManager.DISALLOW_SAFE_BOOT) }
         runCatching {
             dpm.clearPackagePersistentPreferredActivities(admin, pkg)
@@ -95,6 +79,6 @@ object PolicyManager {
             }
             dpm.addPersistentPreferredActivity(admin, web, ComponentName(pkg, "$pkg.BrowserActivity"))
         }
-        lines += "Navigateur par défaut : imposé"
+        lines += "Default browser: enforced"
     }
 }

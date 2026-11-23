@@ -8,24 +8,23 @@ import android.content.pm.PackageManager
 import android.os.Build
 
 /**
- * Contrôle des installations, en réactif.
+ * Reactive install control.
  *
- * Android ne permet pas de refuser l'installation d'un package précis *avant* qu'elle
- * ait lieu. La parade : surveiller les nouvelles apps et appliquer la politique à
- * l'instant où elles apparaissent. La fenêtre est de l'ordre de la milliseconde —
- * l'app est gelée avant de pouvoir être ouverte.
+ * Android does not allow refusing the install of a specific package *before* it happens.
+ * The workaround: watch new apps and apply the policy the instant they appear. The window
+ * is on the order of a millisecond — the app is frozen before it can be opened.
  *
- * Deux cas, qui réutilisent tels quels la mécanique d'engagement de [Store] :
- *   - package déclaré « jamais installable » (ex. Instagram) → gelé, et il le reste ;
- *   - package venu d'ailleurs qu'un store connu (sideload) → gelé, puis dégelé
- *     automatiquement après le délai de réflexion (le temps d'y repenser).
- * Une app installée depuis un store connu passe sans entrave.
+ * Two cases, reusing [Store]'s commitment mechanics as-is:
+ *   - package declared "never installable" (e.g. Instagram) → frozen, and it stays frozen;
+ *   - package from somewhere other than a known store (sideload) → frozen, then thawed
+ *     automatically after the reflection delay (time to reconsider).
+ * An app installed from a known store passes through unhindered.
  */
 class InstallGuard : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_PACKAGE_ADDED) return
-        if (intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) return // mise à jour, pas une install
+        if (intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) return // update, not an install
         val pkg = intent.data?.schemeSpecificPart ?: return
         if (pkg == context.packageName) return
 
@@ -34,12 +33,12 @@ class InstallGuard : BroadcastReceiver() {
 
         val store = Store.get(context)
         when {
-            store.isInstallBlocked(pkg) -> store.block(pkg) // interdit : gelé, sans levée
-            !fromKnownStore(context, pkg) -> {              // sideload : gelé puis levée différée
+            store.isInstallBlocked(pkg) -> store.block(pkg) // forbidden: frozen, no release
+            !fromKnownStore(context, pkg) -> {              // sideload: frozen then deferred release
                 store.block(pkg)
-                store.unblock(pkg) // immédiat si délai = 0, sinon mûrit après le délai
+                store.unblock(pkg) // immediate if delay = 0, otherwise matures after the delay
             }
-            else -> return // app d'un store connu : rien à faire
+            else -> return // app from a known store: nothing to do
         }
         PolicyManager.reconcile(context)
     }
@@ -56,10 +55,10 @@ class InstallGuard : BroadcastReceiver() {
     }
 
     private companion object {
-        /** Installateurs considérés comme des stores de confiance. */
+        /** Installers treated as trusted stores. */
         val KNOWN_STORES = setOf(
             "com.android.vending",            // Google Play
-            "com.google.android.feedback",    // Play (variante)
+            "com.google.android.feedback",    // Play (variant)
             "com.sec.android.app.samsungapps", // Galaxy Store
             "com.amazon.venezia",             // Amazon Appstore
         )

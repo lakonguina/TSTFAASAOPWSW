@@ -21,9 +21,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
- * Tuile « liquid glass » : surface translucide, coins très arrondis, bord lumineux
- * discret, icône + libellé centrés. Pas de flou en direct (perf), l'effet vient de
- * la translucidité sur le dégradé de fond.
+ * "Liquid glass" tile: translucent surface, heavily rounded corners, subtle glowing
+ * edge, centered icon + label. No live blur (perf); the effect comes from the
+ * translucency over the background gradient.
  */
 @Composable
 internal fun GlassTile(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {

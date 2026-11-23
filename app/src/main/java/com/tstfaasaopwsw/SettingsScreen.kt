@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-/** Onglet Réglages : statut + délai de réflexion (le sélecteur vit dans [DelayPicker]). */
+/** Settings tab: status + reflection delay (the picker lives in [DelayPicker]). */
 @Composable
 internal fun SettingsScreen(snap: Snapshot, refresh: () -> Unit) {
     val context = LocalContext.current
@@ -20,10 +20,10 @@ internal fun SettingsScreen(snap: Snapshot, refresh: () -> Unit) {
 
     LazyColumn(Modifier.fillMaxSize()) {
         item { StatusCard(snap) }
-        item { SectionHeader("Délai de réflexion") }
+        item { SectionHeader("Reflection delay") }
         item {
             Text(
-                "Actuel : ${Config.formatDelay(snap.delayMinutes)}",
+                "Current: ${Config.formatDelay(snap.delayMinutes)}",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(16.dp, 0.dp),
             )
@@ -32,7 +32,7 @@ internal fun SettingsScreen(snap: Snapshot, refresh: () -> Unit) {
             item {
                 Box(Modifier.padding(16.dp, 2.dp)) {
                     Text(
-                        "→ passe à ${Config.formatDelay(v)} ${countdown(at)}",
+                        "→ changes to ${Config.formatDelay(v)} ${countdown(at)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -42,9 +42,9 @@ internal fun SettingsScreen(snap: Snapshot, refresh: () -> Unit) {
         item { DelayPicker(snap.delayMinutes) { store.requestDelay(it); refresh() } }
         item {
             Text(
-                "Augmenter le délai (ou bloquer une app, forcer une extension) prend effet " +
-                    "tout de suite. Le baisser — ou débloquer, retirer une extension — ne prend " +
-                    "effet qu'après le délai courant : en attendant, ça reste verrouillé.",
+                "Raising the delay (or blocking an app) takes effect immediately. Lowering it " +
+                    "— or unblocking — only takes effect after the current delay: until then, " +
+                    "it stays locked.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp, 8.dp, 16.dp, 16.dp),

@@ -9,15 +9,15 @@ import java.io.FileOutputStream
 import java.net.DatagramSocket
 
 /**
- * Pare-feu réseau, niveau domaine, pour TOUT le téléphone.
+ * Network firewall, domain level, for the WHOLE phone.
  *
- * Un VPN local qui ne capte **que le DNS** : on ne route vers nous que les requêtes
- * vers notre résolveur virtuel ([VIRT_DNS]) ; tout le reste file en direct, donc une
- * panne de ce service ne coupe pas le réseau. Chaque requête DNS est filtrée ou relayée
- * par [DnsFilter] (NXDOMAIN si le domaine contient un motif de [Store.blockedWeb]).
+ * A local VPN that captures **DNS only**: we route to ourselves only the queries to our
+ * virtual resolver ([VIRT_DNS]); everything else goes direct, so a failure of this service
+ * does not cut the network. Each DNS query is filtered or relayed by [DnsFilter] (NXDOMAIN
+ * if the domain contains a pattern from [Store.blockedWeb]).
  *
- * Limite assumée : ne voit pas le DNS chiffré (DoH/DoT). [FirewallPolicy] force donc
- * le « DNS privé » en mode opportuniste pour que le DNS repasse en clair ici.
+ * Accepted limit: it does not see encrypted DNS (DoH/DoT). [FirewallPolicy] therefore
+ * forces "Private DNS" to opportunistic mode so DNS goes back to cleartext here.
  */
 class FilterVpnService : VpnService() {
 
@@ -33,13 +33,13 @@ class FilterVpnService : VpnService() {
 
     private fun start() {
         val builder = Builder()
-            .setSession("Khazad-dûm")
+            .setSession("TSTFAASAOPWSW")
             .addAddress(VIRT_ADDR, 32)
             .addDnsServer(VIRT_DNS)
-            .addRoute(VIRT_DNS, 32) // seules les requêtes vers notre DNS passent par le tunnel
+            .addRoute(VIRT_DNS, 32) // only queries to our DNS go through the tunnel
             .setBlocking(true)
-        // On s'exclut nous-mêmes : notre navigateur filtre déjà par URL, et notre trafic
-        // (navigateur, updater) ne doit pas être capté par le tunnel (sinon il est coupé).
+        // We exclude ourselves: our browser already filters by URL, and our own traffic
+        // (browser, updater) must not be captured by the tunnel (otherwise it is cut off).
         runCatching { builder.addDisallowedApplication(packageName) }
         val pfd = builder.establish() ?: return
         tun = pfd
@@ -69,7 +69,7 @@ class FilterVpnService : VpnService() {
                 runCatching { DnsFilter.handle(buf, n, store.blockedWeb, output, upstream) }
             }
         } catch (_: Exception) {
-            // tun fermé / thread interrompu : fin normale.
+            // tun closed / thread interrupted: normal end.
         } finally {
             runCatching { upstream.close() }
         }

@@ -26,9 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-/** Onglet Apps : une seule liste = extensions forçables (en haut) puis toutes les apps. */
+/** Apps tab: the list of all apps, each toggle blocking or unblocking it. */
 @Composable
-internal fun BlocagesScreen(apps: List<AppInfo>?, snap: Snapshot, refresh: () -> Unit) {
+internal fun AppsScreen(apps: List<AppInfo>?, snap: Snapshot, refresh: () -> Unit) {
     val context = LocalContext.current
     val store = remember { Store.get(context) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -36,9 +36,6 @@ internal fun BlocagesScreen(apps: List<AppInfo>?, snap: Snapshot, refresh: () ->
     val q = query.trim()
     fun matches(vararg fields: String) = q.isEmpty() || fields.any { it.contains(q, true) }
 
-    val catalogIds = remember { Config.extensionCatalog.map { it.id }.toSet() }
-    val exts = Config.extensionCatalog.filter { matches(it.name, it.id) }
-    val orphanExts = snap.extensions.filter { it.substringBefore(';') !in catalogIds && matches(it) }
     val filteredApps = apps?.filter { matches(it.label, it.pkg) }
 
     Column(Modifier.fillMaxSize()) {
@@ -48,32 +45,10 @@ internal fun BlocagesScreen(apps: List<AppInfo>?, snap: Snapshot, refresh: () ->
             onValueChange = { query = it },
             modifier = Modifier.fillMaxWidth().padding(16.dp, 12.dp, 16.dp, 8.dp),
             leadingIcon = { Icon(Icons.Filled.Search, null) },
-            placeholder = { Text("Rechercher une app ou extension") },
+            placeholder = { Text("Search an app") },
             singleLine = true,
         )
         LazyColumn(Modifier.fillMaxSize()) {
-            items(exts, key = { "ext:${it.id}" }) { ext ->
-                val pendingAt = snap.pendingExtRemoval[ext.value]
-                ToggleRow(
-                    leading = { ExtensionGlyph() },
-                    title = ext.name,
-                    subtitle = "Extension Edge",
-                    checked = ext.value in snap.extensions && pendingAt == null,
-                    pending = pendingAt?.let { "Retrait ${countdown(it)}" },
-                    onChange = { on -> if (on) store.addExtension(ext.value) else store.removeExtension(ext.value); refresh() },
-                )
-            }
-            items(orphanExts, key = { "extx:$it" }) { ext ->
-                val pendingAt = snap.pendingExtRemoval[ext]
-                ToggleRow(
-                    leading = { ExtensionGlyph() },
-                    title = ext.substringBefore(';'),
-                    subtitle = "Extension Edge",
-                    checked = pendingAt == null,
-                    pending = pendingAt?.let { "Retrait ${countdown(it)}" },
-                    onChange = { _ -> store.removeExtension(ext); refresh() },
-                )
-            }
             if (filteredApps == null) {
                 item { Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) { CircularProgressIndicator() } }
             } else {
@@ -84,7 +59,7 @@ internal fun BlocagesScreen(apps: List<AppInfo>?, snap: Snapshot, refresh: () ->
                         title = app.label,
                         subtitle = app.pkg,
                         checked = app.pkg in snap.blocked && pendingAt == null,
-                        pending = pendingAt?.let { "Déblocage ${countdown(it)}" },
+                        pending = pendingAt?.let { "Unblock ${countdown(it)}" },
                         onChange = { on -> if (on) store.block(app.pkg) else store.unblock(app.pkg); refresh() },
                     )
                 }

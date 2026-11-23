@@ -5,13 +5,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 
-/** Réveil inexact qui applique la prochaine attente échue de [Store]. */
+/** Inexact wakeup that applies the next due pending action of [Store]. */
 object PolicyAlarm {
 
     const val ACTION_TICK = "com.tstfaasaopwsw.TICK"
     private const val ALARM_ID = 1001
 
-    /** Programme un réveil à [at], ou l'annule si [at] est null. */
+    /** Schedules a wakeup at [at], or cancels it if [at] is null. */
     fun schedule(context: Context, at: Long?) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val pi = PendingIntent.getBroadcast(

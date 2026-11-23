@@ -4,20 +4,20 @@ import android.content.Context
 import org.json.JSONObject
 
 /**
- * Mise à jour automatique depuis les Releases GitHub, sans USB. Device Owner, donc
- * [ApkInstaller] installe en silence. On interroge `releases/latest` : si le tag `vN`
- * dépasse [BuildConfig.VERSION_CODE], on télécharge l'APK joint et on l'installe.
+ * Automatic update from GitHub Releases, no USB. As Device Owner, [ApkInstaller] installs
+ * silently. We query `releases/latest`: if tag `vN` is newer than [BuildConfig.VERSION_CODE],
+ * we download the attached APK and install it.
  *
- * Mise à jour self : l'APK distant DOIT être signé avec la même clé que l'app installée,
- * sinon Android refuse. D'où une première installation release via USB, puis GitHub.
+ * Self-update: the remote APK MUST be signed with the same key as the installed app,
+ * otherwise Android refuses it. Hence a first release install over USB, then GitHub.
  */
 object Updater {
 
     private const val PREF = "updater"
     private const val K_LAST = "lastCheck"
-    private const val MIN_INTERVAL_MS = 6 * 3_600_000L // au plus une vérif / 6 h
+    private const val MIN_INTERVAL_MS = 6 * 3_600_000L // at most one check / 6 h
 
-    /** Lance une vérification en tâche de fond ; silencieuse en cas d'erreur réseau. */
+    /** Starts a background check; silent on network error. */
     fun checkInBackground(context: Context) {
         val app = context.applicationContext
         Thread { runCatching { check(app) } }.apply { isDaemon = true }.start()
@@ -35,7 +35,7 @@ object Updater {
         ApkInstaller.install(context, apk)
     }
 
-    /** (versionCode, url de l'APK) de la dernière release, ou null. */
+    /** (versionCode, APK url) of the latest release, or null. */
     private fun latestRelease(): Pair<Int, String>? {
         val body = Downloads.getText("https://api.github.com/repos/${Config.githubRepo}/releases/latest")
             ?: return null

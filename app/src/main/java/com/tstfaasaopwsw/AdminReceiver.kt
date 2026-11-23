@@ -7,7 +7,7 @@ import android.content.Intent
 import android.util.Log
 
 /**
- * Composant admin. Désigné via :
+ * Admin component. Designated via:
  *   adb shell dpm set-device-owner com.tstfaasaopwsw/.AdminReceiver
  */
 class AdminReceiver : DeviceAdminReceiver() {

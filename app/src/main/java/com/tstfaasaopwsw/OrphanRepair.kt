@@ -5,12 +5,12 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 
 /**
- * Lève le gel des apps « orphelines » : suspendues/masquées par une instance précédente
- * de la même app (même package), mais plus suivies après une réinstallation (données
- * vierges). Sans ça, une app comme YouTube reste grisée sans que rien ne la débloque.
+ * Thaws "orphan" apps: suspended/hidden by a previous instance of this same app (same
+ * package), but no longer tracked after a reinstall (fresh data). Without this, an app
+ * like YouTube stays greyed out with nothing to unblock it.
  *
- * À lancer une seule fois après une (ré)installation : tout ce qui n'est PAS bloqué est
- * dé-suspendu et démasqué. Sur un appareil Device Owner, notre admin est le seul à geler.
+ * Run once after a (re)install: everything NOT blocked is unsuspended and unhidden. On a
+ * Device Owner device, our admin is the only one that freezes apps.
  */
 object OrphanRepair {
 

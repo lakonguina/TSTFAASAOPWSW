@@ -29,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 
-/** Barre du bas façon Safari : champ d'adresse arrondi, puis une rangée d'actions. */
+/** Safari-style bottom bar: rounded address field, then a row of actions. */
 @Composable
 internal fun BrowserBottomBar(
     tab: Tab,
@@ -50,7 +50,7 @@ internal fun BrowserBottomBar(
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                placeholder = { Text("Adresse ou recherche") },
+                placeholder = { Text("Address or search") },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { onGo(text) }),
             )
@@ -59,12 +59,12 @@ internal fun BrowserBottomBar(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onApp) { Icon(Icons.Filled.Lock, "Revenir à l'application") }
-                IconButton(onClick = onBack, enabled = tab.canGoBack) { Icon(Icons.Filled.ArrowBack, "Précédent") }
-                IconButton(onClick = onForward, enabled = tab.canGoForward) { Icon(Icons.Filled.ArrowForward, "Suivant") }
-                IconButton(onClick = onReload) { Icon(Icons.Filled.Refresh, "Recharger") }
+                IconButton(onClick = onApp) { Icon(Icons.Filled.Lock, "Back to the app") }
+                IconButton(onClick = onBack, enabled = tab.canGoBack) { Icon(Icons.Filled.ArrowBack, "Back") }
+                IconButton(onClick = onForward, enabled = tab.canGoForward) { Icon(Icons.Filled.ArrowForward, "Forward") }
+                IconButton(onClick = onReload) { Icon(Icons.Filled.Refresh, "Reload") }
                 TextButton(onClick = onTabs) { Text("$tabCount") }
-                IconButton(onClick = onHistory) { Icon(Icons.Filled.List, "Historique") }
+                IconButton(onClick = onHistory) { Icon(Icons.Filled.List, "History") }
             }
         }
     }

@@ -24,7 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
-/** Choix du délai : puces rapides + champ libre en minutes. [onPick] applique la valeur. */
+/** Delay picker: quick chips + free field in minutes. [onPick] applies the value. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DelayPicker(current: Long, onPick: (Long) -> Unit) {
@@ -53,7 +53,7 @@ internal fun DelayPicker(current: Long, onPick: (Long) -> Unit) {
                 value = custom,
                 onValueChange = { custom = it.filter(Char::isDigit); customError = false },
                 modifier = Modifier.width(160.dp),
-                label = { Text("Perso (min)") },
+                label = { Text("Custom (min)") },
                 isError = customError,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -61,7 +61,7 @@ internal fun DelayPicker(current: Long, onPick: (Long) -> Unit) {
             OutlinedButton(onClick = {
                 val m = custom.toLongOrNull()
                 if (m == null) customError = true else { onPick(m); custom = "" }
-            }) { Text("Appliquer") }
+            }) { Text("Apply") }
         }
     }
 }

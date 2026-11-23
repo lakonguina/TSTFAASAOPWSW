@@ -23,9 +23,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-/** Écran d'accueil type « springboard » : deux grandes tuiles, Navigateur et Blocage. */
+/** Springboard-style home screen: two large tiles, Browser and Blocking. */
 @Composable
-internal fun HomeScreen(onBrowser: () -> Unit, onBlocage: () -> Unit) {
+internal fun HomeScreen(onBrowser: () -> Unit, onBlocking: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(scheme.surface, scheme.surfaceVariant)))) {
         Column(
@@ -40,8 +40,8 @@ internal fun HomeScreen(onBrowser: () -> Unit, onBlocage: () -> Unit) {
             )
             Spacer(Modifier.height(40.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                GlassTile(Icons.Filled.Search, "Navigateur", onBrowser, Modifier.weight(1f).aspectRatio(1f))
-                GlassTile(Icons.Filled.Lock, "Blocage", onBlocage, Modifier.weight(1f).aspectRatio(1f))
+                GlassTile(Icons.Filled.Search, "Browser", onBrowser, Modifier.weight(1f).aspectRatio(1f))
+                GlassTile(Icons.Filled.Lock, "Blocking", onBlocking, Modifier.weight(1f).aspectRatio(1f))
             }
         }
     }

@@ -3,8 +3,8 @@ package com.tstfaasaopwsw
 import android.content.SharedPreferences
 
 /**
- * File des actions « en attente » (desserrages différés façon Pluckeye), stockée dans
- * les mêmes SharedPreferences que [Store]. Chaque entrée : "KIND\u001Fpayload\u001Fmillis".
+ * Queue of "pending" actions (deferred loosening, Pluckeye-style), stored in the same
+ * SharedPreferences as [Store]. Each entry: "KIND\u001Fpayload\u001Fmillis".
  */
 class PendingQueue(private val sp: SharedPreferences) {
 
@@ -17,11 +17,11 @@ class PendingQueue(private val sp: SharedPreferences) {
         .putStringSet(K_PENDING, list.map { "${it.first}$SEP${it.second}$SEP${it.third}" }.toSet())
         .apply()
 
-    /** Instant d'effet d'une attente visant [kind]/[payload], ou null si aucune. */
+    /** Effective instant of a pending action for [kind]/[payload], or null if none. */
     fun at(kind: String, payload: String): Long? =
         all().firstOrNull { it.first == kind && it.second == payload }?.third
 
-    /** Toutes les attentes d'un type : payload -> instant d'effet. */
+    /** All pending actions of one kind: payload -> effective instant. */
     fun byKind(kind: String): Map<String, Long> =
         all().filter { it.first == kind }.associate { it.second to it.third }
 
@@ -36,22 +36,21 @@ class PendingQueue(private val sp: SharedPreferences) {
 
     fun cancelKind(kind: String) = save(all().filterNot { it.first == kind })
 
-    /** Sépare les attentes échues (<= [now]) du reste, qu'on persiste. */
+    /** Splits due actions (<= [now]) from the rest, which we persist. */
     fun takeDue(now: Long): List<Triple<String, String, Long>> {
         val (due, rest) = all().partition { it.third <= now }
         if (due.isNotEmpty()) save(rest)
         return due
     }
 
-    /** Prochaine échéance restante, ou null. */
+    /** Next remaining due instant, or null. */
     fun nextDue(): Long? = all().minOfOrNull { it.third }
 
     companion object {
         private const val K_PENDING = "pending"
         private const val SEP = "\u001F"
-        const val UB = "UB" // débloquer une app     (payload = package)
-        const val DD = "DD" // baisser le délai       (payload = minutes)
-        const val XR = "XR" // retirer une extension  (payload = "id;url")
-        const val WR = "WR" // retirer une règle web  (payload = motif)
+        const val UB = "UB" // unblock an app      (payload = package)
+        const val DD = "DD" // lower the delay      (payload = minutes)
+        const val WR = "WR" // remove a web rule     (payload = pattern)
     }
 }

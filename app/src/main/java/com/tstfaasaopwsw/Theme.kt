@@ -10,7 +10,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-/** Thème : couleurs dynamiques Material You (Android 12+), sinon palette par défaut. */
+/** Theme: Material You dynamic colors (Android 12+), otherwise the default palette. */
 @Composable
 internal fun ForcelistTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current

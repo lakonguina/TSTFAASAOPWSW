@@ -24,25 +24,25 @@ import org.mozilla.geckoview.GeckoView
 
 internal enum class Screen { Browser, Tabs, History }
 
-/** Boucle d'UI du navigateur : contenu web, overlays, et barre d'actions en bas. */
+/** Browser UI loop: web content, overlays, and the bottom action bar. */
 @Composable
 internal fun Browser(runtime: GeckoRuntime, store: Store, start: String?, onExit: () -> Unit) {
     val tabs = remember { mutableStateListOf<Tab>() }
     var current by remember { mutableIntStateOf(0) }
     var screen by remember { mutableStateOf(Screen.Browser) }
 
-    DisposableEffect(Unit) { // restaure les onglets persistés ; sessions fermées à la sortie
+    DisposableEffect(Unit) { // restores persisted tabs; sessions closed on exit
         store.savedTabs().ifEmpty { listOf(BrowserActivity.HOME) }
             .forEach { u -> tabs.add(Tab(runtime, store).also { it.load(u) }) }
         current = store.savedTabIndex().coerceIn(0, tabs.lastIndex)
-        if (start != null) { // lien externe : nouvel onglet dessus
+        if (start != null) { // external link: open it in a new tab
             tabs.add(Tab(runtime, store).also { it.load(start) }); current = tabs.lastIndex
         }
         onDispose { tabs.forEach { it.close() } }
     }
     if (tabs.isEmpty()) return
 
-    // Persiste les URLs ouvertes et l'onglet courant à chaque changement.
+    // Persists the open URLs and the current tab on every change.
     LaunchedEffect(Unit) {
         snapshotFlow { tabs.map { it.url } to current }.collect { (urls, cur) -> store.saveTabs(urls, cur) }
     }

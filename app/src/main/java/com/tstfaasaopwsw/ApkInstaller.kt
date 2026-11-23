@@ -8,8 +8,8 @@ import android.os.Build
 import java.io.File
 
 /**
- * Installe un APK via [PackageInstaller]. Device Owner : l'installation est silencieuse,
- * sans aucun dialogue. Le résultat est renvoyé à [UpdateReceiver].
+ * Installs an APK via [PackageInstaller]. As Device Owner the install is silent, with no
+ * dialog. The result is sent back to [UpdateReceiver].
  */
 object ApkInstaller {
 

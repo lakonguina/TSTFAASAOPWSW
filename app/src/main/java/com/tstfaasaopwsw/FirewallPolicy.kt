@@ -5,11 +5,11 @@ import android.content.Context
 import android.os.Build
 
 /**
- * Active/désactive le pare-feu réseau. Device Owner : il pose l'app en VPN
- * always-on sans dialogue de consentement.
+ * Enables/disables the network firewall. As Device Owner it sets the app as an always-on
+ * VPN with no consent dialog.
  *
- * Phase de test : [lockdown] = false, donc une panne du filtre ne coupe PAS
- * l'accès réseau. Une fois éprouvé, passer à true (plus aucun trafic hors VPN).
+ * Test phase: [lockdown] = false, so a filter failure does NOT cut network access. Once
+ * proven, switch to true (no more traffic outside the VPN).
  */
 object FirewallPolicy {
 
@@ -30,13 +30,13 @@ object FirewallPolicy {
     }
 
     /**
-     * Sans ça, le « DNS privé » (DoT, chiffré) court-circuite notre filtre : les
-     * requêtes partent chiffrées vers un résolveur externe au lieu de passer en clair
-     * par notre VPN, et aucun domaine bloqué n'est intercepté.
+     * Without this, "Private DNS" (DoT, encrypted) bypasses our filter: queries leave
+     * encrypted toward an external resolver instead of going cleartext through our VPN,
+     * and no blocked domain is intercepted.
      *
-     * Le mode « opportuniste » force le résolveur à viser le DNS du VPN et à retomber
-     * en clair (notre faux résolveur ne répond pas en DoT), ce qui réactive le filtre.
-     * Il écrase aussi un mode « strict » imposé par le réseau, qui contournerait tout.
+     * "Opportunistic" mode forces the resolver to target the VPN's DNS and fall back to
+     * cleartext (our fake resolver does not answer over DoT), which re-enables the filter.
+     * It also overrides a "strict" mode imposed by the network, which would bypass everything.
      */
     private fun forceCleartextDns(dpm: DevicePolicyManager, admin: android.content.ComponentName) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

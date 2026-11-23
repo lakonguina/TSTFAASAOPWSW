@@ -2,7 +2,7 @@ package com.tstfaasaopwsw
 
 import android.content.SharedPreferences
 
-/** Historique de navigation du navigateur embarqué : plus récent en tête, borné à 200. */
+/** Browsing history of the embedded browser: most recent first, capped at 200. */
 class BrowsingHistory(private val sp: SharedPreferences) {
 
     fun entries(): List<String> =

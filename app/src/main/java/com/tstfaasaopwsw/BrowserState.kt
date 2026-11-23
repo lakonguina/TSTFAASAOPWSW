@@ -2,7 +2,7 @@ package com.tstfaasaopwsw
 
 import android.content.SharedPreferences
 
-/** Onglets ouverts persistés : URLs + index courant, restaurés après fermeture/reboot. */
+/** Persisted open tabs: URLs + current index, restored after close/reboot. */
 class BrowserState(private val sp: SharedPreferences) {
 
     fun tabs(): List<String> =

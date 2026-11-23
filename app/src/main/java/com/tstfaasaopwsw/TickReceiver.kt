@@ -4,10 +4,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 
-/** Réveille la réconciliation : échéance d'un délai (alarme) ou redémarrage du téléphone. */
+/** Wakes reconciliation: a due delay (alarm) or a phone reboot. */
 class TickReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         PolicyManager.reconcile(context)
-        Updater.checkInBackground(context) // vérifie GitHub au boot et à chaque échéance
+        Updater.checkInBackground(context) // checks GitHub at boot and on each due time
     }
 }

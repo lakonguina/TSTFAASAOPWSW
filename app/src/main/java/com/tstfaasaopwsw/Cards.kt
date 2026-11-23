@@ -40,11 +40,11 @@ internal fun StatusCard(snap: Snapshot) {
             Icon(if (ok) Icons.Filled.Lock else Icons.Filled.Settings, null, Modifier.padding(end = 12.dp))
             Column {
                 Text(
-                    if (ok) "Appareil sous contrôle" else "Contrôle inactif",
+                    if (ok) "Device under control" else "Control inactive",
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    if (ok) "${snap.blocked.size} app(s) bloquée(s) · ${snap.extensions.size} extension(s) forcée(s)"
+                    if (ok) "${snap.blocked.size} blocked app(s) · ${snap.blockedWeb.size} web rule(s)"
                     else snap.statusText,
                     style = MaterialTheme.typography.bodySmall,
                 )

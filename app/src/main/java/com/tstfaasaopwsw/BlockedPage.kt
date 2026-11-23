@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/** Écran plein affiché à la place d'une page refusée par la liste de blocage. */
+/** Full screen shown in place of a page refused by the block list. */
 @Composable
 internal fun BlockedPage(url: String, onDismiss: () -> Unit) {
     Surface(Modifier.fillMaxSize()) {
@@ -33,7 +33,7 @@ internal fun BlockedPage(url: String, onDismiss: () -> Unit) {
                 Modifier.size(56.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
-            Text("Site bloqué", style = MaterialTheme.typography.titleLarge)
+            Text("Site blocked", style = MaterialTheme.typography.titleLarge)
             Text(
                 url,
                 style = MaterialTheme.typography.bodyMedium,
@@ -42,12 +42,12 @@ internal fun BlockedPage(url: String, onDismiss: () -> Unit) {
                 maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             Text(
-                "Cette page est dans ta liste de blocage.",
+                "This page is in your block list.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            OutlinedButton(onClick = onDismiss) { Text("Retour") }
+            OutlinedButton(onClick = onDismiss) { Text("Back") }
         }
     }
 }

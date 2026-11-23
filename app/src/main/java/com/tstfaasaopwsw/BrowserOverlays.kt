@@ -26,7 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/** Liste des onglets ouverts : sélection, fermeture, nouvel onglet. */
+/** List of open tabs: select, close, new tab. */
 @Composable
 internal fun TabsOverlay(
     tabs: List<Tab>,
@@ -38,8 +38,8 @@ internal fun TabsOverlay(
     Surface(Modifier.fillMaxSize()) {
         Column {
             Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Onglets", style = MaterialTheme.typography.titleMedium)
-                IconButton(onClick = onNew) { Icon(Icons.Filled.Add, "Nouvel onglet") }
+                Text("Tabs", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = onNew) { Icon(Icons.Filled.Add, "New tab") }
             }
             LazyColumn(Modifier.fillMaxSize()) {
                 itemsIndexed(tabs) { i, t ->
@@ -49,7 +49,7 @@ internal fun TabsOverlay(
                         },
                         supportingContent = { Text(t.url, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         leadingContent = { if (i == current) Text("•") },
-                        trailingContent = { IconButton(onClick = { onClose(i) }) { Icon(Icons.Filled.Clear, "Fermer") } },
+                        trailingContent = { IconButton(onClick = { onClose(i) }) { Icon(Icons.Filled.Clear, "Close") } },
                         modifier = Modifier.fillMaxWidth().clickable { onSelect(i) },
                     )
                 }
@@ -58,17 +58,17 @@ internal fun TabsOverlay(
     }
 }
 
-/** Historique de navigation : ouvrir une entrée ou tout effacer. */
+/** Browsing history: open an entry or clear everything. */
 @Composable
 internal fun HistoryOverlay(store: Store, onOpen: (String) -> Unit, onClose: () -> Unit) {
     val entries = remember { store.history() }
     Surface(Modifier.fillMaxSize()) {
         Column {
             Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Historique", style = MaterialTheme.typography.titleMedium)
+                Text("History", style = MaterialTheme.typography.titleMedium)
                 Row {
-                    TextButton(onClick = { store.clearHistory(); onClose() }) { Text("Effacer") }
-                    IconButton(onClick = onClose) { Icon(Icons.Filled.Clear, "Fermer") }
+                    TextButton(onClick = { store.clearHistory(); onClose() }) { Text("Clear") }
+                    IconButton(onClick = onClose) { Icon(Icons.Filled.Clear, "Close") }
                 }
             }
             LazyColumn(Modifier.fillMaxSize()) {

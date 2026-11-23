@@ -5,13 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 
 /**
- * Écran principal : springboard d'accueil ([AppRoot]) menant au Navigateur ou au
- * Blocage (apps, web, réglages). En Jetpack Compose Material 3.
+ * Main screen: home springboard ([AppRoot]) leading to the Browser or Blocking
+ * (apps, web, settings). Built with Jetpack Compose Material 3.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Updater.checkInBackground(this) // mise à jour auto depuis GitHub (throttlée)
+        Updater.checkInBackground(this) // auto-update from GitHub (throttled)
         setContent { ForcelistTheme { AppRoot() } }
     }
 }

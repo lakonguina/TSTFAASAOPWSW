@@ -30,17 +30,17 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
-/** Écran Blocage : apps, web, réglages (onglets du bas) + retour à l'accueil. */
+/** Blocking screen: apps, web, settings (bottom tabs) + back to home. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun BlocageHost(onHome: () -> Unit) {
+internal fun BlockHost(onHome: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var tick by remember { mutableIntStateOf(0) }
     var appsEpoch by remember { mutableIntStateOf(0) }
 
-    // Revenir au premier plan (ex. retour du Play Store) recharge l'état ET la liste
-    // d'apps, pour que les installations récentes apparaissent sans relancer l'app.
+    // Returning to the foreground (e.g. back from the Play Store) reloads the state AND
+    // the app list, so recent installs show up without relaunching the app.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) { tick++; appsEpoch++ }
@@ -57,9 +57,9 @@ internal fun BlocageHost(onHome: () -> Unit) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Blocage") },
+                title = { Text("Blocking") },
                 navigationIcon = {
-                    IconButton(onClick = onHome) { Icon(Icons.Filled.ArrowBack, "Accueil") }
+                    IconButton(onClick = onHome) { Icon(Icons.Filled.ArrowBack, "Home") }
                 },
             )
         },
@@ -75,14 +75,14 @@ internal fun BlocageHost(onHome: () -> Unit) {
                 )
                 NavigationBarItem(
                     selected = tab == 2, onClick = { tab = 2 },
-                    icon = { Icon(Icons.Filled.Settings, null) }, label = { Text("Réglages") },
+                    icon = { Icon(Icons.Filled.Settings, null) }, label = { Text("Settings") },
                 )
             }
         },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when (tab) {
-                0 -> BlocagesScreen(apps.value, snapshot, refresh)
+                0 -> AppsScreen(apps.value, snapshot, refresh)
                 1 -> WebScreen(snapshot, refresh)
                 else -> SettingsScreen(snapshot, refresh)
             }
