@@ -1,7 +1,5 @@
 package com.tstfaasaopwsw
 
-/** Fixed constants. The lists (blocked apps, delay) are dynamic and live in
- *  [Store], editable from the app. */
 object Config {
 
     /**
@@ -21,4 +19,20 @@ object Config {
         min % 60L == 0L -> "${min / 60} h"
         else -> "${min / 60} h ${min % 60}"
     }
+
+    /** One hideable element: an XPath to hide on [site], labeled [name] in the UI. */
+    data class ElementRule(val site: String, val name: String, val xpath: String) {
+        /** Stable id used as the enabled-set key and the toggle key. */
+        val id: String get() = "$site|$name"
+    }
+
+    /**
+     * Built-in catalog of hideable elements (mirrors xpath-blocklist.xlsx). Each can be
+     * toggled on/off in the Web tab; enabled ones are hidden by the browser, no reload.
+     */
+    val elementCatalog: List<ElementRule> = listOf(
+        ElementRule("x.com", "Feed", "/html/body/div[1]/div/div/div[2]/main/div/div/div/div/div/div[3]"),
+        ElementRule("x.com", "Right sidebar", "//div[@data-testid='sidebarColumn']"),
+        ElementRule("youtube.com", "Home grid", "//ytd-rich-grid-renderer"),
+    )
 }

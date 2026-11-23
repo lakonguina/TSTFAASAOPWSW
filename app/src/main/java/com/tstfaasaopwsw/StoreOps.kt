@@ -5,6 +5,7 @@ import com.tstfaasaopwsw.PendingQueue.Companion.UB
 import com.tstfaasaopwsw.PendingQueue.Companion.WR
 import com.tstfaasaopwsw.Store.Companion.K_BLOCKED
 import com.tstfaasaopwsw.Store.Companion.K_DELAY
+import com.tstfaasaopwsw.Store.Companion.K_ELEM
 import com.tstfaasaopwsw.Store.Companion.K_INSTALL_BLOCK
 import com.tstfaasaopwsw.Store.Companion.K_KNOWN
 import com.tstfaasaopwsw.Store.Companion.K_WEB
@@ -35,6 +36,11 @@ fun Store.unblockWeb(pattern: String) {
     if (delayMinutes <= 0L) putSets(K_WEB to blockedWeb - pattern)
     else if (pendingWebRemovalAt(pattern) == null && pattern in blockedWeb) pending.add(WR, pattern, effective())
 }
+
+// --- hideable elements (toggle immediate both ways for now) ---
+fun Store.enableElement(id: String) = putSets(K_ELEM to enabledElements + id)
+
+fun Store.disableElement(id: String) = putSets(K_ELEM to enabledElements - id)
 
 // --- delay (raising = immediate; lowering = deferred) ---
 fun Store.requestDelay(newMin: Long) {

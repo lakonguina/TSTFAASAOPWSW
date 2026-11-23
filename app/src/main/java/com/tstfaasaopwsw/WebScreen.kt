@@ -40,6 +40,21 @@ internal fun WebScreen(snap: Snapshot, refresh: () -> Unit) {
             onChange = { on -> FirewallPolicy.setFirewall(context, on); refresh() },
         )
 
+        SectionHeader("Hide elements")
+        Config.elementCatalog.forEach { rule ->
+            ToggleRow(
+                leading = { WebGlyph() },
+                title = rule.name,
+                subtitle = rule.site,
+                checked = rule.id in snap.enabledElements,
+                pending = null,
+                onChange = { on ->
+                    if (on) store.enableElement(rule.id) else store.disableElement(rule.id)
+                    ElementHider.sync(store); refresh()
+                },
+            )
+        }
+
         SectionHeader("Blocked sites and URLs")
         Row(
             Modifier.fillMaxWidth().padding(16.dp, 0.dp, 16.dp, 8.dp),

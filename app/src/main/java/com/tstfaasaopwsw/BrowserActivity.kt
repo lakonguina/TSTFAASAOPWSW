@@ -19,6 +19,7 @@ class BrowserActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ElementHider.install(runtime(this), Store.get(this))
         val start = intent?.dataString?.takeIf { it.isNotBlank() }
         setContent {
             ForcelistTheme {

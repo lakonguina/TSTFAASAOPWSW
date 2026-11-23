@@ -33,6 +33,7 @@ class Store private constructor(internal val sp: SharedPreferences) {
     val installBlocked: Set<String> get() = set(K_INSTALL_BLOCK)
     fun isInstallBlocked(pkg: String): Boolean = pkg in installBlocked
     val blockedWeb: Set<String> get() = set(K_WEB)
+    val enabledElements: Set<String> get() = set(K_ELEM)
     val firewallEnabled: Boolean get() = sp.getBoolean(K_FW, false)
     fun setFirewallEnabled(on: Boolean) = sp.edit().putBoolean(K_FW, on).apply()
 
@@ -84,6 +85,7 @@ class Store private constructor(internal val sp: SharedPreferences) {
         internal const val K_KNOWN = "known"
         internal const val K_INSTALL_BLOCK = "installBlock"
         internal const val K_WEB = "web"
+        internal const val K_ELEM = "elements"
         private const val K_FW = "firewall"
         private const val K_REPAIRED = "repaired"
     }
