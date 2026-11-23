@@ -1,1 +1,2 @@
-div[data-testid="cellInnerDiv"] { display: none !important; }
+/* Source: BevizLaszlo/UBlock-Filters-for-Social-Media (MIT), x.com home timeline. */
+[aria-label="Timeline: Your Home Timeline"] { display: none !important; }

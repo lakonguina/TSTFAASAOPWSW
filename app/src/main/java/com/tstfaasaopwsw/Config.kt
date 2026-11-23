@@ -38,6 +38,6 @@ object Config {
     val elementCatalog: List<ElementRule> = listOf(
         ElementRule("x.com", "Feed", "feed-x"),
         ElementRule("x.com", "Right sidebar", "sidebar-x"),
-        ElementRule("youtube.com", "Home grid", "home-youtube"),
+        ElementRule("youtube.com", "Home feed", "home-youtube"),
     )
 }
