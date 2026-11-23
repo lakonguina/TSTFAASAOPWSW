@@ -1,152 +1,65 @@
-# ForceList
+# TSTFAASAOPWSW
 
-Outil **personnel** d'auto-discipline pour mon propre téléphone Android.
+**The Software to Fight Algorithms as Strong as Optimus Prime Without Sheer Willpower.**
 
-Il verrouille quelques-uns de mes réglages — force mes extensions de filtrage dans
-Edge, garde mes outils de contrôle non-désinstallables, met mes apps distrayantes en
-pause — pour que je ne puisse pas les défaire sur un coup de tête. Même principe que
-Family Link, Temps d'écran ou Pluckeye/Andoff : un engagement envers moi-même.
+Feeds and recommendation engines are built to beat your willpower — fighting them
+head-on is a losing match against Optimus Prime. This is a personal Android
+self-discipline tool that commits the device *for* you, so you don't have to win that
+fight every day. Same spirit as Family Link, Screen Time or Pluckeye.
 
-C'est mon appareil, que je configure moi-même en clair via adb. Il reste une sortie de
-secours (voir plus bas).
+It runs as **Device Owner** (Android Enterprise / `DevicePolicyManager`) on my own
+phone, which I provision myself over adb. Native Kotlin, minSdk 24.
 
-Technique : API officielles Android Enterprise / `DevicePolicyManager`, celles qu'emploient
-tous les outils de gestion d'appareil. Kotlin natif, minSdk 24, aucune dépendance externe.
+## What it does
 
-## Ce que je configure (dans l'app, plus dans le code)
+Everything is toggled from the app and persists.
 
-Tout se pilote depuis l'écran de l'app, et c'est persistant :
+- **Reflection delay** — tightening (block an app, raise the delay) is immediate;
+  loosening (unblock, lower the delay) only applies **after the current delay**. The
+  wait is visible and fires on its own (alarm + reboot). Friction by design.
+- **Apps** — a Blocked/Allowed switch per app. Blocked = hidden + suspended, and kept
+  from coming back via reinstall.
+- **Web** — block a domain or a full URL (path-level in the built-in browser,
+  domain-level system-wide through a local DNS firewall).
+- **Hide elements** — kill the distraction surfaces directly: the X home feed, the
+  YouTube home feed… Each is a toggle; hiding is done by a bundled content script using
+  stable, language-independent selectors (`data-testid`), scoped to the right page.
+- **Browser** — an embedded GeckoView browser, enforced as the default, so web rules
+  can't be dodged. Google as the search engine.
+- **Auto-update** — pulls the latest signed APK from GitHub Releases (Device Owner
+  installs it silently). The Device Owner and data survive updates.
 
-- **Délai de réflexion** — sélecteur en haut. Règle d'auto-engagement façon Pluckeye :
-  **serrer** (bloquer une app, ajouter une extension, **augmenter** le délai) prend effet
-  **immédiatement** ; **desserrer** (débloquer, retirer une extension, **baisser** le délai)
-  n'entre en vigueur **qu'après le délai courant**. L'attente est visible (« déblocage dans
-  ~N min ») et se déclenche seule (alarme + au redémarrage).
-- **Applications** — liste de mes apps, un interrupteur Bloqué/Autorisé par app. Bloqué =
-  masquée / mise en pause (`setApplicationHidden`).
-- **Extensions forcées (Edge)** — j'ajoute un ID d'extension ; il est forcé via
-  `ExtensionInstallForcelist`. Le retrait suit le délai.
+## Build
 
-Seules constantes encore dans [`Config.kt`](app/src/main/java/com/tstfaasaopwsw/Config.kt) :
-le navigateur cible, l'URL de mise à jour Edge, et les choix du sélecteur de délai.
-L'état vécu est dans `SharedPreferences` ([`Store`](app/src/main/java/com/tstfaasaopwsw/Store.kt)).
-
-## Construire
-
-Le wrapper Gradle est inclus (`./gradlew`), inutile d'installer Gradle.
-Il faut un **JDK 17**.
-
-- **Android Studio** : ouvrir le dossier → Run. Studio fournit son propre JDK et
-  télécharge au besoin la plateforme SDK (`android-34`). Le plus simple.
-- **Ligne de commande** : avec un JDK 17 pointé par `JAVA_HOME` (celui d'Android
-  Studio convient, souvent `~/android-studio/jbr` ou `/opt/android-studio/jbr`) :
+Gradle wrapper included; needs **JDK 17**. Android Studio is simplest (Run). CLI:
 
 ```bash
-export JAVA_HOME=/chemin/vers/jdk-17
-export ANDROID_HOME=$HOME/Android/Sdk
-./gradlew assembleDebug   # produit app/build/outputs/apk/debug/app-debug.apk
+export JAVA_HOME=/path/to/jdk-17   # Android Studio's JBR works
+./gradlew assembleDebug            # -> app/build/outputs/apk/debug/app-debug.apk
 ```
 
-> Compilé et vérifié avec JDK 17 + AGP 8.5.2 ; la plateforme `android-34` est
-> téléchargée automatiquement au premier build si absente.
+compileSdk 35 / AGP 8.6; `android-35` is downloaded on first build if missing.
 
-## Tester (sans sacrifier mon vrai téléphone)
+## Install as Device Owner
 
-Un Device Owner ne s'installe que sur un appareil **sans compte**. Pour éprouver la
-logique d'abord, le mieux est un **émulateur jetable** — je le crée, je casse, je
-recrée sans conséquence.
-
-1. Créer un AVD avec une image système **sans Google Play** (sinon un compte est
-   présent et `set-device-owner` échoue), via Android Studio (Device Manager) ou en
-   ligne de commande, puis le démarrer.
-2. Installer et désigner comme Device Owner :
-
-   ```bash
-   adb install -t app/build/outputs/apk/debug/app-debug.apk   # -t : app testOnly
-   adb shell dpm set-device-owner com.tstfaasaopwsw/.AdminReceiver
-   ```
-
-3. Vérifier chaque effet :
-
-   ```bash
-   adb shell dpm list-owners                 # doit lister mon app
-   adb shell pm list packages | grep instagram   # une app masquée disparaît de la liste
-   adb shell pm uninstall com.tstfaasaopwsw  # -> Failure (désinstallation bloquée)
-   ```
-
-   - Les apps de `hiddenApps` disparaissent du lanceur.
-   - Dans l'app : l'écran récapitule chaque étape en ✓ / ✗.
-   - Extensions : seulement si Edge est installé sur l'AVD → `edge://policy`.
-
-4. Pour recommencer à zéro : `adb shell dpm remove-active-admin com.tstfaasaopwsw/.AdminReceiver`,
-   ou simplement supprimer l'AVD.
-
-Astuce : `adb shell pm list packages` me donne les noms de packages exacts à mettre
-dans [`Config.kt`](app/src/main/java/com/tstfaasaopwsw/Config.kt).
-
-## Mise en place sur mon vrai téléphone (réinitialisé, sans compte Google)
+`set-device-owner` only works on a **freshly reset phone with zero accounts**. Provision
+with the **release** APK (stable key), never debug — otherwise future updates are
+rejected.
 
 ```bash
-./gradlew assembleRelease        # APK signé avec MA clé stable
-adb install -t app/build/outputs/apk/release/app-release.apk
+./gradlew assembleRelease
+adb install app/build/outputs/apk/release/app-release.apk
 adb shell dpm set-device-owner com.tstfaasaopwsw/.AdminReceiver
 ```
 
-> ⚠️ Toujours provisionner le vrai téléphone avec l'**APK release** (clé stable),
-> jamais le debug — sinon aucune mise à jour future ne sera acceptée (voir plus bas).
+## Keystore (keep it safe)
 
-Un seul Device Owner par appareil — si je viens d'Andoff, je le retire d'abord et je
-remets l'ID Pluckeye dans `extensions`.
+The app is signed with a **stable key** (`release.keystore` + `keystore.properties`,
+both gitignored). Android only accepts an update signed with the same key. **Lose the
+key = can't update the installed app → factory reset.** For CI, pass the keystore as a
+base64 secret (see `.github/workflows/release.yml`).
 
-Dès l'activation, `AdminReceiver.onEnabled` applique la politique. Je peux aussi ouvrir
-l'app et toucher **Appliquer ma politique** : l'opération est idempotente, rejouable à
-volonté.
+## Escape hatch
 
-## Vérifier
-
-- Dans Edge : `edge://policy` → `ExtensionInstallForcelist` au statut OK, mes IDs présents.
-- Mes extensions apparaissent « gérées par l'organisation », sans bouton Supprimer.
-- L'écran de l'app récapitule chaque étape (✓ / ✗).
-
-## Sortie de secours
-
-```bash
-adb shell dpm remove-active-admin com.tstfaasaopwsw/.AdminReceiver
-```
-
-Lève la politique sans réinitialiser (horloge remasquée rendue, désinstallation
-débloquée). Cette commande ne fonctionne que parce que l'app est marquée
-**`android:testOnly="true"`** — sinon Android refuse de retirer un Device Owner et il
-faut un factory reset. La friction voulue reste là : il faut un PC avec adb, donc pas
-de retour en arrière impulsif depuis le téléphone.
-
-## Limites
-
-- Ne marche que si le navigateur honore la policy : **Edge oui**, Chrome standard sur
-  Android ne gère pas les extensions.
-- `set-device-owner` exige un appareil fraîchement réinitialisé, sans compte ajouté.
-- App `testOnly` : installer avec `adb install -t` (Android Studio le gère seul). En
-  contrepartie, pas de distribution via le Play Store — sans objet pour un outil perso.
-
-## Signature & mises à jour
-
-L'app est signée avec **une clé stable** (`release.keystore`), pas la clé debug
-jetable. C'est ce qui rend l'outil **évolutif sans réinstaller ni réinitialiser** :
-
-- Faire évoluer l'app plus tard (nouvelles listes, auto-update, délai de réflexion…) =
-  `./gradlew assembleRelease` puis `adb install -r -t …app-release.apk`. Le Device
-  Owner et les données **survivent** à la mise à jour, **tant que la signature est la
-  même**. Penser à **incrémenter `versionCode`** à chaque version.
-- Android n'accepte une mise à jour que si le nouvel APK a la **même signature** que
-  l'installé. D'où la clé stable fixée une fois pour toutes.
-
-🔑 **À sauvegarder précieusement, hors de ce dépôt :** `release.keystore` **et**
-`keystore.properties` (ils contiennent la clé + le mot de passe, et sont gitignorés).
-**Les perdre = impossible de mettre à jour l'app installée → factory reset obligatoire.**
-Les secrets locaux suivent le modèle [`keystore.properties.example`](keystore.properties.example) ;
-pour un build CI (GitHub Actions), fournir le keystore en base64 + ces valeurs via des secrets.
-
-## Phase 2 (hors scope)
-
-- Délai de réflexion : un changement de mes listes ne s'applique qu'après N heures.
-- `DISALLOW_CONFIG_VPN`, always-on VPN verrouillé (`setAlwaysOnVpnPackage(..., lockdown = true)`).
+There is no one-tap removal — that's the point. Taking off the Device Owner needs a PC
+with adb (and the device at zero accounts), so there's no impulsive undo from the phone.
