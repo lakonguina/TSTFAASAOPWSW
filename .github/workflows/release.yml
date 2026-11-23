@@ -1,7 +1,7 @@
 name: release
 
-# Pousser un tag vN (ex. git tag v8 && git push origin v8) construit, signe et publie
-# l'APK release. L'app (Updater) lit releases/latest et s'installe toute seule.
+# Pushing a tag vN (e.g. git tag v8 && git push origin v8) builds, signs and publishes
+# the release APK. The app (Updater) reads releases/latest and installs itself.
 on:
   push:
     tags: ['v*']
