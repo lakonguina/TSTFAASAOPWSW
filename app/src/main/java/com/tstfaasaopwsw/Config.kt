@@ -20,19 +20,24 @@ object Config {
         else -> "${min / 60} h ${min % 60}"
     }
 
-    /** One hideable element: an XPath to hide on [site], labeled [name] in the UI. */
-    data class ElementRule(val site: String, val name: String, val xpath: String) {
+    /**
+     * One hideable element, backed by a built-in web extension [extId] that hides a CSS
+     * selector on [site] (static content-script CSS). [name] labels the UI toggle.
+     */
+    data class ElementRule(val site: String, val name: String, val extId: String) {
         /** Stable id used as the enabled-set key and the toggle key. */
         val id: String get() = "$site|$name"
+        val geckoId: String get() = "$extId@tstfaasaopwsw"
+        val uri: String get() = "resource://android/assets/rules/$extId/"
     }
 
     /**
-     * Built-in catalog of hideable elements (mirrors xpath-blocklist.xlsx). Each can be
-     * toggled on/off in the Web tab; enabled ones are hidden by the browser, no reload.
+     * Built-in catalog of hideable elements (mirrors xpath-blocklist.xlsx). Each is a tiny
+     * bundled extension (assets/rules/<extId>); the Web-tab toggle enables or disables it.
      */
     val elementCatalog: List<ElementRule> = listOf(
-        ElementRule("x.com", "Feed", "/html/body/div[1]/div/div/div[2]/main/div/div/div/div/div/div[3]"),
-        ElementRule("x.com", "Right sidebar", "//div[@data-testid='sidebarColumn']"),
-        ElementRule("youtube.com", "Home grid", "//ytd-rich-grid-renderer"),
+        ElementRule("x.com", "Feed", "feed-x"),
+        ElementRule("x.com", "Right sidebar", "sidebar-x"),
+        ElementRule("youtube.com", "Home grid", "home-youtube"),
     )
 }

@@ -1,42 +1,44 @@
 package com.tstfaasaopwsw
 
-import org.json.JSONArray
-import org.json.JSONObject
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.WebExtension
+import org.mozilla.geckoview.WebExtensionController
 
 /**
- * Loads the bundled "hider" web extension and feeds it the enabled element rules. Its
- * content script hides them by XPath (CSS display:none, no reload). The app <-> extension
- * link is a native port named "browser"; the extension connects, the app pushes rules.
+ * Hides page elements via one tiny built-in web extension per catalog rule (static
+ * content-script CSS, hidden before paint, no reload, survives SPA re-renders). A toggle
+ * just enables or disables the matching extension — no app <-> extension messaging, which
+ * GeckoView does not support on Android ("Native manifests are not supported").
+ *
+ * A toggle takes effect on the next page load of the site.
  */
 object ElementHider {
-    private const val ID = "hider@tstfaasaopwsw"
-    private var port: WebExtension.Port? = null
+    private var controller: WebExtensionController? = null
+    private val exts = mutableMapOf<String, WebExtension>()
 
     fun install(runtime: GeckoRuntime, store: Store) {
-        runtime.webExtensionController.ensureBuiltIn("resource://android/assets/hider/", ID)
-            .accept { ext -> ext?.setMessageDelegate(delegate(store), "browser") }
+        val c = runtime.webExtensionController
+        controller = c
+        for (r in Config.elementCatalog) {
+            c.ensureBuiltIn(r.uri, r.geckoId).accept { ext ->
+                if (ext != null) { exts[r.id] = ext; applyOne(r.id, store) }
+            }
+        }
     }
 
-    /** Push the current enabled rules to the extension (call on toggle change). */
+    /** Align each extension's enabled state with the store (call on toggle change). */
     fun sync(store: Store) {
-        runCatching { port?.postMessage(payload(store)) }
+        for (r in Config.elementCatalog) applyOne(r.id, store)
     }
 
-    private fun delegate(store: Store) = object : WebExtension.MessageDelegate {
-        override fun onConnect(p: WebExtension.Port) {
-            port = p
-            runCatching { p.postMessage(payload(store)) }
+    private fun applyOne(id: String, store: Store) {
+        val c = controller ?: return
+        val ext = exts[id] ?: return
+        val result = if (id in store.enabledElements) {
+            c.enable(ext, WebExtensionController.EnableSource.USER)
+        } else {
+            c.disable(ext, WebExtensionController.EnableSource.USER)
         }
-    }
-
-    private fun payload(store: Store): JSONObject {
-        val arr = JSONArray()
-        val on = store.enabledElements
-        for (r in Config.elementCatalog) if (r.id in on) {
-            arr.put(JSONObject().put("site", r.site).put("xpath", r.xpath))
-        }
-        return JSONObject().put("rules", arr)
+        result.accept { updated -> if (updated != null) exts[id] = updated }
     }
 }
