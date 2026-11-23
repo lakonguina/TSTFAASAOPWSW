@@ -27,9 +27,9 @@ Tout se pilote depuis l'écran de l'app, et c'est persistant :
 - **Extensions forcées (Edge)** — j'ajoute un ID d'extension ; il est forcé via
   `ExtensionInstallForcelist`. Le retrait suit le délai.
 
-Seules constantes encore dans [`Config.kt`](app/src/main/java/com/khazaddum/forcelist/Config.kt) :
+Seules constantes encore dans [`Config.kt`](app/src/main/java/com/tstfaasaopwsw/Config.kt) :
 le navigateur cible, l'URL de mise à jour Edge, et les choix du sélecteur de délai.
-L'état vécu est dans `SharedPreferences` ([`Store`](app/src/main/java/com/khazaddum/forcelist/Store.kt)).
+L'état vécu est dans `SharedPreferences` ([`Store`](app/src/main/java/com/tstfaasaopwsw/Store.kt)).
 
 ## Construire
 
@@ -63,7 +63,7 @@ recrée sans conséquence.
 
    ```bash
    adb install -t app/build/outputs/apk/debug/app-debug.apk   # -t : app testOnly
-   adb shell dpm set-device-owner com.khazaddum.forcelist/.AdminReceiver
+   adb shell dpm set-device-owner com.tstfaasaopwsw/.AdminReceiver
    ```
 
 3. Vérifier chaque effet :
@@ -71,25 +71,25 @@ recrée sans conséquence.
    ```bash
    adb shell dpm list-owners                 # doit lister mon app
    adb shell pm list packages | grep instagram   # une app masquée disparaît de la liste
-   adb shell pm uninstall com.khazaddum.forcelist  # -> Failure (désinstallation bloquée)
+   adb shell pm uninstall com.tstfaasaopwsw  # -> Failure (désinstallation bloquée)
    ```
 
    - Les apps de `hiddenApps` disparaissent du lanceur.
    - Dans l'app : l'écran récapitule chaque étape en ✓ / ✗.
    - Extensions : seulement si Edge est installé sur l'AVD → `edge://policy`.
 
-4. Pour recommencer à zéro : `adb shell dpm remove-active-admin com.khazaddum.forcelist/.AdminReceiver`,
+4. Pour recommencer à zéro : `adb shell dpm remove-active-admin com.tstfaasaopwsw/.AdminReceiver`,
    ou simplement supprimer l'AVD.
 
 Astuce : `adb shell pm list packages` me donne les noms de packages exacts à mettre
-dans [`Config.kt`](app/src/main/java/com/khazaddum/forcelist/Config.kt).
+dans [`Config.kt`](app/src/main/java/com/tstfaasaopwsw/Config.kt).
 
 ## Mise en place sur mon vrai téléphone (réinitialisé, sans compte Google)
 
 ```bash
 ./gradlew assembleRelease        # APK signé avec MA clé stable
 adb install -t app/build/outputs/apk/release/app-release.apk
-adb shell dpm set-device-owner com.khazaddum.forcelist/.AdminReceiver
+adb shell dpm set-device-owner com.tstfaasaopwsw/.AdminReceiver
 ```
 
 > ⚠️ Toujours provisionner le vrai téléphone avec l'**APK release** (clé stable),
@@ -111,7 +111,7 @@ volonté.
 ## Sortie de secours
 
 ```bash
-adb shell dpm remove-active-admin com.khazaddum.forcelist/.AdminReceiver
+adb shell dpm remove-active-admin com.tstfaasaopwsw/.AdminReceiver
 ```
 
 Lève la politique sans réinitialiser (horloge remasquée rendue, désinstallation

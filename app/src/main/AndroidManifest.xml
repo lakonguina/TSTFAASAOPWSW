@@ -57,7 +57,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="com.khazaddum.forcelist.TICK" />
+                <action android:name="com.tstfaasaopwsw.TICK" />
             </intent-filter>
         </receiver>
 

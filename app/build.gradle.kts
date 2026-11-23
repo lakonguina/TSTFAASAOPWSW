@@ -15,11 +15,11 @@ val keystoreProps = Properties().apply {
 val hasReleaseKeystore = keystoreProps.getProperty("storeFile") != null
 
 android {
-    namespace = "com.khazaddum.forcelist"
+    namespace = "com.tstfaasaopwsw"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.khazaddum.forcelist"
+        applicationId = "com.tstfaasaopwsw"
         minSdk = 24
         targetSdk = 34
         // En CI : ./gradlew assembleRelease -PversionCode=8 (dérivé du tag vN).
