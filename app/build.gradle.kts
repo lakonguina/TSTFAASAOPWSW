@@ -16,7 +16,7 @@ val hasReleaseKeystore = keystoreProps.getProperty("storeFile") != null
 
 android {
     namespace = "com.tstfaasaopwsw"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.tstfaasaopwsw"
@@ -85,5 +85,5 @@ dependencies {
 
     // Navigateur embarqué : GeckoView (moteur Firefox). Version ESR 128, compatible
     // compileSdk 34. C'est la seule base Android qui laisse l'app filtrer la navigation.
-    implementation("org.mozilla.geckoview:geckoview:128.0.20240725162350")
+    implementation("org.mozilla.geckoview:geckoview:135.0.20250216192613")
 }
