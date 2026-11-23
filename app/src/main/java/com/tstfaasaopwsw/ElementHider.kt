@@ -19,9 +19,16 @@ object ElementHider {
     fun install(runtime: GeckoRuntime, store: Store) {
         val c = runtime.webExtensionController
         controller = c
-        for (r in Config.elementCatalog) {
-            c.ensureBuiltIn(r.uri, r.geckoId).accept { ext ->
-                if (ext != null) { exts[r.id] = ext; applyOne(r.id, store) }
+        val wanted = Config.elementCatalog.map { it.geckoId }.toSet()
+        // Drop our own stale extensions left in GeckoView's profile by earlier versions.
+        c.list().accept { installed ->
+            installed?.forEach { ext ->
+                if (ext.id.endsWith("@tstfaasaopwsw") && ext.id !in wanted) runCatching { c.uninstall(ext) }
+            }
+            for (r in Config.elementCatalog) {
+                c.ensureBuiltIn(r.uri, r.geckoId).accept { ext ->
+                    if (ext != null) { exts[r.id] = ext; applyOne(r.id, store) }
+                }
             }
         }
     }

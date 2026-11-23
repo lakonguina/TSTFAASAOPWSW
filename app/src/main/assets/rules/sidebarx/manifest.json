@@ -1,0 +1,9 @@
+{
+  "manifest_version": 2,
+  "name": "sidebarx",
+  "version": "1",
+  "browser_specific_settings": { "gecko": { "id": "sidebarx@tstfaasaopwsw" } },
+  "content_scripts": [
+    { "matches": ["*://x.com/*", "*://*.x.com/*"], "css": ["hide.css"], "run_at": "document_start" }
+  ]
+}

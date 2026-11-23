@@ -36,8 +36,8 @@ object Config {
      * bundled extension (assets/rules/<extId>); the Web-tab toggle enables or disables it.
      */
     val elementCatalog: List<ElementRule> = listOf(
-        ElementRule("x.com", "Feed", "feed-x"),
-        ElementRule("x.com", "Right sidebar", "sidebar-x"),
-        ElementRule("youtube.com", "Home feed", "home-youtube"),
+        ElementRule("x.com", "Feed", "feedx"),
+        ElementRule("x.com", "Right sidebar", "sidebarx"),
+        ElementRule("youtube.com", "Home feed", "ytfeed"),
     )
 }
