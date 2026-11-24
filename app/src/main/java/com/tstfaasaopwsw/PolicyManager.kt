@@ -32,10 +32,11 @@ object PolicyManager {
         ElementHider.sync(store) // matured hide-rule disables take effect if the browser is live
         FirewallPolicy.apply(context, store.firewallEnabled)
         hardenAndDefaultBrowser(dpm, admin, pkg, lines)
-        PolicyAlarm.schedule(context, nextWake)
-        if (nextWake != null) {
-            val mins = ((nextWake - System.currentTimeMillis()) / 60_000L).coerceAtLeast(0)
-            lines += "Next due in ~$mins min"
+        val wake = listOfNotNull(nextWake, store.nextWindowBoundaryMillis()).minOrNull()
+        PolicyAlarm.schedule(context, wake)
+        if (wake != null) {
+            val mins = ((wake - System.currentTimeMillis()) / 60_000L).coerceAtLeast(0)
+            lines += "Next check in ~$mins min"
         }
         return PolicyReport(true, "✅ Device Owner active.\n\n" + lines.joinToString("\n"))
     }
@@ -52,8 +53,8 @@ object PolicyManager {
     private fun applyAppBlocks(
         dpm: DevicePolicyManager, admin: ComponentName, store: Store, lines: MutableList<String>,
     ) {
-        val blocked = store.blocked
-        for (p in store.known) {
+        val blocked = store.effectiveBlockedApps()
+        for (p in store.known + store.windowedAppPackages()) {
             if (p in blocked) {
                 runCatching { dpm.setPackagesSuspended(admin, arrayOf(p), true) }
                 runCatching { dpm.setApplicationHidden(admin, p, true) }

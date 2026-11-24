@@ -30,7 +30,7 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
                 // Also catches SPA navigations (e.g. X/Twitter via pushState),
                 // that do NOT go through onLoadRequest: here we react afterwards.
                 url = locationUri ?: ""
-                val hit = locationUri != null && store.blockedWeb.any { UrlRules.matchesUrl(locationUri, it) }
+                val hit = locationUri != null && store.effectiveBlockedWeb().any { UrlRules.matchesUrl(locationUri, it) }
                 blocked = if (hit) locationUri else null
                 if (!hit) locationUri?.let { store.addHistory(it) }
             }
@@ -47,7 +47,7 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
                 session: GeckoSession,
                 request: GeckoSession.NavigationDelegate.LoadRequest,
             ): GeckoResult<AllowOrDeny> {
-                val hit = store.blockedWeb.any { UrlRules.matchesUrl(request.uri, it) }
+                val hit = store.effectiveBlockedWeb().any { UrlRules.matchesUrl(request.uri, it) }
                 if (hit) blocked = request.uri
                 return GeckoResult.fromValue(if (hit) AllowOrDeny.DENY else AllowOrDeny.ALLOW)
             }

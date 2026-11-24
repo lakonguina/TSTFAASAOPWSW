@@ -72,6 +72,7 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                     service.packages.forEach { if (on) store.block(it) else store.unblock(it) }; refresh()
                 },
             )
+            service.packages.firstOrNull()?.let { AllowedHoursRow(ScheduleKeys.app(it), snap, refresh) }
         }
 
         val domain = service.domain
@@ -86,6 +87,7 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                 pending = removalAt?.let { "Unblock ${countdown(it)}" },
                 onChange = { on -> if (on) store.blockWeb(domain) else store.unblockWeb(domain); refresh() },
             )
+            AllowedHoursRow(ScheduleKeys.web(domain), snap, refresh)
             Config.elementsFor(domain).forEach { rule ->
                 val elemAt = snap.pendingElement[rule.id]
                 ToggleRow(
@@ -99,6 +101,7 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                         ElementHider.sync(store); refresh()
                     },
                 )
+                AllowedHoursRow(ScheduleKeys.elem(rule.id), snap, refresh)
             }
         }
     }

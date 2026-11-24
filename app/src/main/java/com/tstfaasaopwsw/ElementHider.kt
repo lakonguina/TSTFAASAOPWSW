@@ -41,7 +41,7 @@ object ElementHider {
     private fun applyOne(id: String, store: Store) {
         val c = controller ?: return
         val ext = exts[id] ?: return
-        val result = if (id in store.enabledElements) {
+        val result = if (id in store.effectiveEnabledElements()) {
             c.enable(ext, WebExtensionController.EnableSource.USER)
         } else {
             c.disable(ext, WebExtensionController.EnableSource.USER)
