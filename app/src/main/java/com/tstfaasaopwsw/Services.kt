@@ -23,7 +23,11 @@ internal data class ServiceInfo(
     val packages: List<String>,
     val domain: String?,
     val installed: Boolean,
-)
+    val editable: Boolean,
+) {
+    /** A user-defined service with no installed app can be deleted outright. */
+    val deletable: Boolean get() = editable && !installed
+}
 
 /**
  * The services list: the fixed [Config.catalog] (shown installed or not), plus every
@@ -33,27 +37,28 @@ internal data class ServiceInfo(
 internal suspend fun loadServices(context: Context): List<ServiceInfo> = withContext(Dispatchers.IO) {
     val pm = context.packageManager
     val self = context.packageName
+    val store = Store.get(context)
+    val defs = store.serviceDefs()
     val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
     val launchable = pm.queryIntentActivities(launcher, 0).map { it.activityInfo.packageName }.toSet()
-    val cataloged = Config.catalog.flatMap { it.packages }.toSet()
+    val covered = defs.flatMap { it.packages }.toSet()
 
-    val fromCatalog = Config.catalog.map { s ->
-        val installedPkg = s.packages.firstOrNull { it.isInstalled(pm) }
-        ServiceInfo(s.domain ?: s.packages.first(), s.label, installedPkg?.iconOf(pm),
-            s.packages, s.domain, installedPkg != null)
+    val fromDefs = defs.map { d ->
+        val installedPkg = d.packages.firstOrNull { it.isInstalled(pm) }
+        ServiceInfo(d.id, d.label, installedPkg?.iconOf(pm), d.packages, d.domain, installedPkg != null, true)
     }
-    val fromApps = ((launchable - cataloged) - self).mapNotNull { pkg ->
+    val fromApps = ((launchable - covered) - self).mapNotNull { pkg ->
         runCatching {
             val ai = pm.getApplicationInfo(pkg, 0)
             ServiceInfo(pkg, pm.getApplicationLabel(ai).toString(),
-                pm.getApplicationIcon(ai).toSquareBitmap(), listOf(pkg), null, true)
+                pm.getApplicationIcon(ai).toSquareBitmap(), listOf(pkg), null, true, false)
         }.getOrNull()
     }
-    val knownDomains = Config.catalog.mapNotNull { it.domain }.toSet()
-    val fromWeb = (Store.get(context).blockedWeb - knownDomains).map { d ->
-        ServiceInfo(d, d, null, emptyList(), d, false)
+    val knownDomains = defs.mapNotNull { it.domain }.toSet()
+    val fromWeb = (store.blockedWeb - knownDomains).map { d ->
+        ServiceInfo(d, d, null, emptyList(), d, false, false)
     }
-    (fromCatalog + fromApps + fromWeb).sortedBy { it.label.lowercase() }
+    (fromDefs + fromApps + fromWeb).sortedBy { it.label.lowercase() }
 }
 
 private fun String.isInstalled(pm: PackageManager): Boolean =
