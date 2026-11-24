@@ -42,19 +42,22 @@ object Config {
     )
 
     /**
-     * App package -> its website domain. Lets a per-app page drive the web rules
-     * (block the site, hide its feed) alongside blocking the app itself. Apps absent
-     * here only expose the app-level block.
+     * A service groups, under one name, the app [packages] and the website [domain] of
+     * the same product (e.g. Twitter: com.twitter.android + x.com). The services list is
+     * built from this catalog so a service shows even when its app is not installed,
+     * letting its web rules be set in advance. [domain] null = app with no known site.
      */
-    val serviceDomain: Map<String, String> = mapOf(
-        "com.google.android.googlequicksearchbox" to "google.com",
-        "com.google.android.youtube" to "youtube.com",
-        "com.instagram.android" to "instagram.com",
-        "com.twitter.android" to "x.com",
-        "com.zhiliaoapp.musically" to "tiktok.com",
-        "com.facebook.katana" to "facebook.com",
-        "com.reddit.frontpage" to "reddit.com",
-        "com.snapchat.android" to "snapchat.com",
+    data class Service(val label: String, val packages: List<String>, val domain: String?)
+
+    val catalog: List<Service> = listOf(
+        Service("Google", listOf("com.google.android.googlequicksearchbox"), "google.com"),
+        Service("YouTube", listOf("com.google.android.youtube"), "youtube.com"),
+        Service("Instagram", listOf("com.instagram.android"), "instagram.com"),
+        Service("Twitter / X", listOf("com.twitter.android"), "x.com"),
+        Service("TikTok", listOf("com.zhiliaoapp.musically"), "tiktok.com"),
+        Service("Facebook", listOf("com.facebook.katana"), "facebook.com"),
+        Service("Reddit", listOf("com.reddit.frontpage"), "reddit.com"),
+        Service("Snapchat", listOf("com.snapchat.android"), "snapchat.com"),
     )
 
     /** Hideable surfaces (feed, navbar…) bound to a given site domain. */

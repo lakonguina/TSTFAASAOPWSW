@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-/** Settings tab: status + reflection delay (the picker lives in [DelayPicker]). */
+/** General tab: status + global filter + reflection delay (the picker lives in [DelayPicker]). */
 @Composable
 internal fun SettingsScreen(snap: Snapshot, refresh: () -> Unit) {
     val context = LocalContext.current
@@ -20,6 +20,18 @@ internal fun SettingsScreen(snap: Snapshot, refresh: () -> Unit) {
 
     LazyColumn(Modifier.fillMaxSize()) {
         item { StatusCard(snap) }
+        item { SectionHeader("Global filter") }
+        item {
+            ToggleRow(
+                leading = { WebGlyph() },
+                title = "Filter the whole phone",
+                subtitle = if (snap.firewallEnabled) "On — blocked sites are blocked in every app"
+                else "Off — only this app's browser filters",
+                checked = snap.firewallEnabled,
+                pending = null,
+                onChange = { on -> FirewallPolicy.setFirewall(context, on); refresh() },
+            )
+        }
         item { SectionHeader("Reflection delay") }
         item {
             Text(
