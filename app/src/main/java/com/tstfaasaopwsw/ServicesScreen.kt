@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -57,13 +58,14 @@ internal fun ServicesScreen(services: List<ServiceInfo>?, snap: Snapshot, refres
             OutlinedTextField(
                 value = site,
                 onValueChange = { site = it },
-                modifier = Modifier.weight(1f),
-                label = { Text("Filter, or block a site (e.g. pornhub.com)") },
+                modifier = Modifier.weight(1f).height(48.dp),
+                placeholder = { Text("Filter or block a site") },
+                textStyle = MaterialTheme.typography.bodyMedium,
                 singleLine = true,
             )
             OutlinedButton(onClick = {
                 if (q.isNotEmpty()) { store.blockWeb(q); site = ""; refresh() }
-            }) { Text("Block") }
+            }, modifier = Modifier.height(48.dp)) { Text("Block") }
         }
         LazyColumn(Modifier.fillMaxSize()) {
             if (filtered == null) {
