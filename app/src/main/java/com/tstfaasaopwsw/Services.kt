@@ -20,6 +20,7 @@ internal data class ServiceInfo(
     val key: String,
     val label: String,
     val icon: ImageBitmap?,
+    val logoRes: Int?,
     val packages: List<String>,
     val domain: String?,
     val installed: Boolean,
@@ -40,18 +41,18 @@ internal suspend fun loadServices(context: Context): List<ServiceInfo> = withCon
     val fromCatalog = Config.catalog.map { s ->
         val installedPkg = s.packages.firstOrNull { it.isInstalled(pm) }
         ServiceInfo(s.domain ?: s.packages.first(), s.label, installedPkg?.iconOf(pm),
-            s.packages, s.domain, installedPkg != null)
+            s.logoRes, s.packages, s.domain, installedPkg != null)
     }
     val fromApps = ((launchable - cataloged) - self).mapNotNull { pkg ->
         runCatching {
             val ai = pm.getApplicationInfo(pkg, 0)
             ServiceInfo(pkg, pm.getApplicationLabel(ai).toString(),
-                pm.getApplicationIcon(ai).toSquareBitmap(), listOf(pkg), null, true)
+                pm.getApplicationIcon(ai).toSquareBitmap(), null, listOf(pkg), null, true)
         }.getOrNull()
     }
     val knownDomains = Config.catalog.mapNotNull { it.domain }.toSet()
     val fromWeb = (Store.get(context).blockedWeb - knownDomains).map { d ->
-        ServiceInfo(d, d, null, emptyList(), d, false)
+        ServiceInfo(d, d, null, null, emptyList(), d, false)
     }
     (fromCatalog + fromApps + fromWeb).sortedBy { it.label.lowercase() }
 }

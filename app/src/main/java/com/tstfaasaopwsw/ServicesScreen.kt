@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,14 +17,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,18 +41,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 /** Apps tab: the services list (app + web grouped); tapping one opens its controls. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ServicesScreen(services: List<ServiceInfo>?, snap: Snapshot, refresh: () -> Unit, onOpen: (ServiceInfo) -> Unit) {
     val context = LocalContext.current
     val store = remember { Store.get(context) }
-    var site by rememberSaveable { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
+    var sheetOpen by rememberSaveable { mutableStateOf(false) }
 
-    val q = site.trim()
+    val q = query.trim()
     val filtered = services?.filter { q.isEmpty() || it.label.contains(q, true) || it.domain?.contains(q, true) == true }
 
     Column(Modifier.fillMaxSize()) {
@@ -56,16 +66,16 @@ internal fun ServicesScreen(services: List<ServiceInfo>?, snap: Snapshot, refres
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedTextField(
-                value = site,
-                onValueChange = { site = it },
-                modifier = Modifier.weight(1f).height(48.dp),
-                placeholder = { Text("Filter or block a site") },
-                textStyle = MaterialTheme.typography.bodyMedium,
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.weight(1f),
+                leadingIcon = { Icon(Icons.Filled.Search, null) },
+                placeholder = { Text("Search a service") },
                 singleLine = true,
             )
-            OutlinedButton(onClick = {
-                if (q.isNotEmpty()) { store.blockWeb(q); site = ""; refresh() }
-            }, modifier = Modifier.height(48.dp)) { Text("Block") }
+            FilledTonalIconButton(onClick = { sheetOpen = true }) {
+                Icon(Icons.Filled.Add, "Block a site")
+            }
         }
         LazyColumn(Modifier.fillMaxSize()) {
             if (filtered == null) {
@@ -85,6 +95,35 @@ internal fun ServicesScreen(services: List<ServiceInfo>?, snap: Snapshot, refres
             }
         }
     }
+
+    if (sheetOpen) {
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(onDismissRequest = { sheetOpen = false }, sheetState = sheetState) {
+            BlockSiteSheet(onBlock = { domain -> store.blockWeb(domain); sheetOpen = false; refresh() })
+        }
+    }
+}
+
+/** Bottom-sheet form to block an arbitrary site not in the catalog. */
+@Composable
+private fun BlockSiteSheet(onBlock: (String) -> Unit) {
+    var input by rememberSaveable { mutableStateOf("") }
+    Column(Modifier.fillMaxWidth().padding(24.dp, 0.dp, 24.dp, 32.dp)) {
+        Text("Block a site", style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(
+            value = input,
+            onValueChange = { input = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Domain (e.g. pornhub.com)") },
+            singleLine = true,
+        )
+        Spacer(Modifier.height(16.dp))
+        Button(
+            onClick = { val d = input.trim(); if (d.isNotEmpty()) onBlock(d) },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Block") }
+    }
 }
 
 private fun statusLine(s: ServiceInfo, appOn: Boolean, webOn: Boolean): String {
@@ -98,14 +137,16 @@ private fun statusLine(s: ServiceInfo, appOn: Boolean, webOn: Boolean): String {
     return listOfNotNull(app, web).joinToString(" · ")
 }
 
-/** App icon when installed, else a lettered circle fallback (web-only / not-installed services). */
+/** Bundled logo if the catalog provides one, else the installed app icon, else a lettered circle. */
 @Composable
 internal fun ServiceIcon(service: ServiceInfo, size: Dp) {
     val icon = service.icon
-    if (icon != null) {
-        Image(icon, null, Modifier.size(size))
-    } else {
-        Box(
+    when {
+        service.logoRes != null -> Image(
+            painterResource(service.logoRes), service.label, Modifier.size(size).clip(RoundedCornerShape(size / 4)),
+        )
+        icon != null -> Image(icon, null, Modifier.size(size))
+        else -> Box(
             Modifier.size(size).clip(RoundedCornerShape(size / 4))
                 .background(MaterialTheme.colorScheme.secondaryContainer),
             Alignment.Center,

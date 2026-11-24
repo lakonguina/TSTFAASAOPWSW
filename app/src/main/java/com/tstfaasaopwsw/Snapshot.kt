@@ -14,6 +14,7 @@ internal data class Snapshot(
     val pendingDelay: Pair<Long, Long>?,
     val pendingUnblock: Map<String, Long>,
     val pendingWebRemoval: Map<String, Long>,
+    val pendingElement: Map<String, Long>,
 )
 
 internal fun buildSnapshot(context: Context): Snapshot {
@@ -30,5 +31,6 @@ internal fun buildSnapshot(context: Context): Snapshot {
         pendingDelay = store.pendingDelay(),
         pendingUnblock = store.pendingUnblocks(),
         pendingWebRemoval = store.pendingWebRemovals(),
+        pendingElement = store.pendingElements(),
     )
 }

@@ -29,6 +29,7 @@ object PolicyManager {
             store.markRepaired()
         }
         applyAppBlocks(dpm, admin, store, lines)
+        ElementHider.sync(store) // matured hide-rule disables take effect if the browser is live
         hardenAndDefaultBrowser(dpm, admin, pkg, lines)
         PolicyAlarm.schedule(context, nextWake)
         if (nextWake != null) {

@@ -47,13 +47,18 @@ object Config {
      * built from this catalog so a service shows even when its app is not installed,
      * letting its web rules be set in advance. [domain] null = app with no known site.
      */
-    data class Service(val label: String, val packages: List<String>, val domain: String?)
+    data class Service(
+        val label: String,
+        val packages: List<String>,
+        val domain: String?,
+        val logoRes: Int? = null,
+    )
 
     val catalog: List<Service> = listOf(
         Service("Google", listOf("com.google.android.googlequicksearchbox"), "google.com"),
         Service("YouTube", listOf("com.google.android.youtube"), "youtube.com"),
         Service("Instagram", listOf("com.instagram.android"), "instagram.com"),
-        Service("Twitter / X", listOf("com.twitter.android"), "x.com"),
+        Service("Twitter / X", listOf("com.twitter.android"), "x.com", R.drawable.logo_x),
         Service("TikTok", listOf("com.zhiliaoapp.musically"), "tiktok.com"),
         Service("Facebook", listOf("com.facebook.katana"), "facebook.com"),
         Service("Reddit", listOf("com.reddit.frontpage"), "reddit.com"),

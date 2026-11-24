@@ -65,12 +65,13 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                 onChange = { on -> if (on) store.blockWeb(domain) else store.unblockWeb(domain); refresh() },
             )
             Config.elementsFor(domain).forEach { rule ->
+                val elemAt = snap.pendingElement[rule.id]
                 ToggleRow(
                     leading = { WebGlyph() },
                     title = rule.name,
                     subtitle = "Hide on ${rule.site}",
-                    checked = rule.id in snap.enabledElements,
-                    pending = null,
+                    checked = rule.id in snap.enabledElements && elemAt == null,
+                    pending = elemAt?.let { "Show again ${countdown(it)}" },
                     onChange = { on ->
                         if (on) store.enableElement(rule.id) else store.disableElement(rule.id)
                         ElementHider.sync(store); refresh()

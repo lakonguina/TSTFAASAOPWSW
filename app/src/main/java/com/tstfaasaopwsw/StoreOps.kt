@@ -1,6 +1,7 @@
 package com.tstfaasaopwsw
 
 import com.tstfaasaopwsw.PendingQueue.Companion.DD
+import com.tstfaasaopwsw.PendingQueue.Companion.ED
 import com.tstfaasaopwsw.PendingQueue.Companion.UB
 import com.tstfaasaopwsw.PendingQueue.Companion.WR
 import com.tstfaasaopwsw.Store.Companion.K_BLOCKED
@@ -37,10 +38,16 @@ fun Store.unblockWeb(pattern: String) {
     else if (pendingWebRemovalAt(pattern) == null && pattern in blockedWeb) pending.add(WR, pattern, effective())
 }
 
-// --- hideable elements (toggle immediate both ways for now) ---
-fun Store.enableElement(id: String) = putSets(K_ELEM to enabledElements + id)
+// --- hideable elements (enabling = tighten/immediate; disabling = loosen/deferred) ---
+fun Store.enableElement(id: String) {
+    pending.cancel(ED, id)
+    putSets(K_ELEM to enabledElements + id)
+}
 
-fun Store.disableElement(id: String) = putSets(K_ELEM to enabledElements - id)
+fun Store.disableElement(id: String) {
+    if (delayMinutes <= 0L) putSets(K_ELEM to enabledElements - id)
+    else if (pendingElementAt(id) == null && id in enabledElements) pending.add(ED, id, effective())
+}
 
 // --- delay (raising = immediate; lowering = deferred) ---
 fun Store.requestDelay(newMin: Long) {
