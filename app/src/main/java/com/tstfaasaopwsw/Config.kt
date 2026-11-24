@@ -40,4 +40,23 @@ object Config {
         ElementRule("x.com", "Right sidebar", "sidebarx"),
         ElementRule("youtube.com", "Home feed", "ytfeed"),
     )
+
+    /**
+     * App package -> its website domain. Lets a per-app page drive the web rules
+     * (block the site, hide its feed) alongside blocking the app itself. Apps absent
+     * here only expose the app-level block.
+     */
+    val serviceDomain: Map<String, String> = mapOf(
+        "com.google.android.googlequicksearchbox" to "google.com",
+        "com.google.android.youtube" to "youtube.com",
+        "com.instagram.android" to "instagram.com",
+        "com.twitter.android" to "x.com",
+        "com.zhiliaoapp.musically" to "tiktok.com",
+        "com.facebook.katana" to "facebook.com",
+        "com.reddit.frontpage" to "reddit.com",
+        "com.snapchat.android" to "snapchat.com",
+    )
+
+    /** Hideable surfaces (feed, navbar…) bound to a given site domain. */
+    fun elementsFor(domain: String): List<ElementRule> = elementCatalog.filter { it.site == domain }
 }

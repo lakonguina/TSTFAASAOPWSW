@@ -1,5 +1,6 @@
 package com.tstfaasaopwsw
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -52,38 +54,45 @@ internal fun BlockHost(onHome: () -> Unit) {
     val snapshot = remember(tick) { buildSnapshot(context) }
     val refresh: () -> Unit = { tick++ }
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var openedPkg by rememberSaveable { mutableStateOf<String?>(null) }
     val apps = produceState<List<AppInfo>?>(initialValue = null, appsEpoch) { value = loadApps(context) }
+    val openedApp = apps.value?.firstOrNull { it.pkg == openedPkg }
+    if (openedApp != null) BackHandler { openedPkg = null }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Blocking") },
+                title = { Text(openedApp?.label ?: "Blocking") },
                 navigationIcon = {
-                    IconButton(onClick = onHome) { Icon(Icons.Filled.ArrowBack, "Home") }
+                    val back = openedApp != null
+                    IconButton(onClick = { if (back) openedPkg = null else onHome() }) {
+                        Icon(Icons.Filled.ArrowBack, if (back) "Back" else "Home")
+                    }
                 },
             )
         },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = tab == 0, onClick = { tab = 0 },
+                    selected = tab == 0 && openedApp == null, onClick = { tab = 0; openedPkg = null },
                     icon = { Icon(Icons.Filled.Lock, null) }, label = { Text("Apps") },
                 )
                 NavigationBarItem(
-                    selected = tab == 1, onClick = { tab = 1 },
+                    selected = tab == 1 && openedApp == null, onClick = { tab = 1; openedPkg = null },
                     icon = { Icon(Icons.Filled.Home, null) }, label = { Text("Web") },
                 )
                 NavigationBarItem(
-                    selected = tab == 2, onClick = { tab = 2 },
+                    selected = tab == 2 && openedApp == null, onClick = { tab = 2; openedPkg = null },
                     icon = { Icon(Icons.Filled.Settings, null) }, label = { Text("Settings") },
                 )
             }
         },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
-            when (tab) {
-                0 -> AppsScreen(apps.value, snapshot, refresh)
-                1 -> WebScreen(snapshot, refresh)
+            when {
+                openedApp != null -> AppDetailScreen(openedApp, snapshot, refresh)
+                tab == 0 -> AppsScreen(apps.value, snapshot, refresh, onOpen = { openedPkg = it.pkg })
+                tab == 1 -> WebScreen(snapshot, refresh)
                 else -> SettingsScreen(snapshot, refresh)
             }
         }
