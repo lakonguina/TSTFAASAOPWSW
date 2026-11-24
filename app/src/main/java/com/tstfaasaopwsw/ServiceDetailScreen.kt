@@ -1,10 +1,10 @@
 package com.tstfaasaopwsw
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -45,10 +45,17 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
     var editing by rememberSaveable { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(16.dp, 16.dp, 8.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
             ServiceIcon(service, 48.dp)
             Spacer(Modifier.width(16.dp))
-            Text(service.label, style = MaterialTheme.typography.titleLarge)
+            Text(service.label, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            if (service.editable) {
+                val tint = MaterialTheme.colorScheme.onSurfaceVariant
+                IconButton(onClick = { editing = true }) { Icon(Icons.Filled.Edit, "Edit", tint = tint) }
+                if (service.deletable) IconButton(onClick = { store.removeService(service.key); refresh() }) {
+                    Icon(Icons.Filled.Delete, "Delete", tint = tint)
+                }
+            }
         }
 
         if (service.packages.isNotEmpty()) {
@@ -93,20 +100,6 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                     },
                 )
             }
-        }
-
-        if (service.editable) {
-            SectionHeader("Service")
-            ListItem(
-                modifier = Modifier.clickable { editing = true },
-                leadingContent = { Icon(Icons.Filled.Edit, null) },
-                headlineContent = { Text("Edit name, package or domain") },
-            )
-            if (service.deletable) ListItem(
-                modifier = Modifier.clickable { store.removeService(service.key); refresh() },
-                leadingContent = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                headlineContent = { Text("Delete service", color = MaterialTheme.colorScheme.error) },
-            )
         }
     }
 
