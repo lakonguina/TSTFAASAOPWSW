@@ -24,6 +24,7 @@ internal data class ServiceInfo(
     val domain: String?,
     val installed: Boolean,
     val editable: Boolean,
+    val customRules: List<String> = emptyList(),
 ) {
     /** A user-defined service with no installed app can be deleted outright. */
     val deletable: Boolean get() = editable && !installed
@@ -43,9 +44,15 @@ internal suspend fun loadServices(context: Context): List<ServiceInfo> = withCon
     val launchable = pm.queryIntentActivities(launcher, 0).map { it.activityInfo.packageName }.toSet()
     val covered = defs.flatMap { it.packages }.toSet()
 
+    val userRules = store.userRules()
+    val defDomains = defs.mapNotNull { it.domain }.toSet()
+    fun rulesFor(domain: String) =
+        userRules.filter { UrlRules.host(it) == domain && UrlRules.path(it).isNotEmpty() }
+
     val fromDefs = defs.map { d ->
         val installedPkg = d.packages.firstOrNull { it.isInstalled(pm) }
-        ServiceInfo(d.id, d.label, installedPkg?.iconOf(pm), d.packages, d.domain, installedPkg != null, true)
+        ServiceInfo(d.id, d.label, installedPkg?.iconOf(pm), d.packages, d.domain,
+            installedPkg != null, true, d.domain?.let { rulesFor(it) } ?: emptyList())
     }
     val fromApps = ((launchable - covered) - self).mapNotNull { pkg ->
         runCatching {
@@ -54,9 +61,10 @@ internal suspend fun loadServices(context: Context): List<ServiceInfo> = withCon
                 pm.getApplicationIcon(ai).toSquareBitmap(), listOf(pkg), null, true, false)
         }.getOrNull()
     }
-    val knownDomains = defs.mapNotNull { it.domain }.toSet()
-    val fromWeb = (store.blockedWeb - knownDomains).map { d ->
-        ServiceInfo(d, d, null, emptyList(), d, false, false)
+    // Blocked sites and user rules whose host is not a catalog service: shown on their own.
+    val orphanHosts = (store.blockedWeb + userRules).map { UrlRules.host(it) }.toSet() - defDomains
+    val fromWeb = orphanHosts.filter { it.isNotEmpty() }.map { host ->
+        ServiceInfo(host, host, null, emptyList(), host, false, false, rulesFor(host))
     }
     (fromDefs + fromApps + fromWeb).sortedBy { it.label.lowercase() }
 }

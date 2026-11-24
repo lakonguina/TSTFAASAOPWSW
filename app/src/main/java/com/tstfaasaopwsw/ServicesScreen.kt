@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
@@ -27,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -97,7 +101,36 @@ internal fun ServicesScreen(services: List<ServiceInfo>?, snap: Snapshot, refres
     if (sheetOpen) {
         val sheetState = rememberModalBottomSheetState()
         ModalBottomSheet(onDismissRequest = { sheetOpen = false }, sheetState = sheetState) {
-            ServiceForm(initial = null, onSave = { def -> store.upsertService(def); sheetOpen = false; refresh() })
+            AddSheet(
+                onBlockUrl = { p -> store.addUserRule(p); PolicyManager.reconcile(context); sheetOpen = false; refresh() },
+                onNewService = { def -> store.upsertService(def); sheetOpen = false; refresh() },
+            )
+        }
+    }
+}
+
+/** The Apps-list "+" sheet: block a URL (auto-filed under the matching service) or create a service. */
+@Composable
+private fun AddSheet(onBlockUrl: (String) -> Unit, onNewService: (ServiceDef) -> Unit) {
+    var newService by remember { mutableStateOf(false) }
+    if (newService) {
+        ServiceForm(initial = null, onSave = onNewService)
+        return
+    }
+    var url by remember { mutableStateOf("") }
+    Column(Modifier.fillMaxWidth().padding(24.dp, 0.dp, 24.dp, 32.dp)) {
+        Text("Block a URL or site", style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(url, { url = it }, Modifier.fillMaxWidth(),
+            label = { Text("URL or domain (e.g. x.com/settings)") }, singleLine = true)
+        Spacer(Modifier.height(16.dp))
+        Button(
+            onClick = { val p = url.trim(); if (p.isNotEmpty()) onBlockUrl(p) },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Block") }
+        Spacer(Modifier.height(4.dp))
+        TextButton(onClick = { newService = true }, modifier = Modifier.fillMaxWidth()) {
+            Text("New service instead")
         }
     }
 }

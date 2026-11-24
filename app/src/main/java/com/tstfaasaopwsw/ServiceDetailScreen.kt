@@ -63,6 +63,19 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                     snap = snap, refresh = refresh,
                 )
             }
+            service.customRules.sorted().forEach { pattern ->
+                val removalAt = snap.pendingWebRemoval[pattern]
+                RuleRow(
+                    key = ScheduleKeys.web(pattern),
+                    title = UrlRules.path(pattern).ifEmpty { pattern },
+                    checked = pattern in snap.blockedWeb && removalAt == null,
+                    pending = removalAt?.let { "Unblock ${countdown(it)}" },
+                    onChange = { on -> if (on) store.blockWeb(pattern) else store.unblockWeb(pattern); refresh() },
+                    snap = snap, refresh = refresh,
+                    onDelete = { store.removeUserRule(pattern); PolicyManager.reconcile(context); refresh() },
+                )
+            }
+            AddRuleRow(domain, refresh)
         }
     }
 }

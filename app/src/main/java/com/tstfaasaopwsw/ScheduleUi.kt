@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
@@ -52,6 +55,7 @@ internal fun RuleRow(
     onChange: (Boolean) -> Unit,
     snap: Snapshot,
     refresh: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val store = remember { Store.get(context) }
@@ -60,7 +64,7 @@ internal fun RuleRow(
     var sheetOpen by remember { mutableStateOf(false) }
 
     ListItem(
-        headlineContent = { Text(title) },
+        headlineContent = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Text(
                 pending ?: summary(window, quota),
@@ -72,6 +76,9 @@ internal fun RuleRow(
         },
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onDelete != null) IconButton(onClick = onDelete) {
+                    Icon(Icons.Filled.Delete, "Delete rule", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 IconButton(onClick = { sheetOpen = true }) { Icon(Icons.Filled.DateRange, "Limit access") }
                 Switch(checked = checked, onCheckedChange = onChange)
             }
@@ -84,6 +91,44 @@ internal fun RuleRow(
             ScheduleSheet(title, window, quota) { w, q ->
                 store.setWindow(key, w); store.setQuota(key, q)
                 PolicyManager.reconcile(context); sheetOpen = false; refresh()
+            }
+        }
+    }
+}
+
+/** "Add a rule" entry under a service's Web section: block a specific URL on [domain]. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun AddRuleRow(domain: String, refresh: () -> Unit) {
+    val context = LocalContext.current
+    val store = remember { Store.get(context) }
+    var sheetOpen by remember { mutableStateOf(false) }
+
+    ListItem(
+        modifier = Modifier.clickable { sheetOpen = true },
+        leadingContent = { Icon(Icons.Filled.Add, null) },
+        headlineContent = { Text("Add a rule") },
+        supportingContent = { Text("Block a specific URL on $domain", style = MaterialTheme.typography.labelSmall) },
+    )
+
+    if (sheetOpen) {
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(onDismissRequest = { sheetOpen = false }, sheetState = sheetState) {
+            var input by remember { mutableStateOf("https://$domain/") }
+            Column(Modifier.fillMaxWidth().padding(24.dp, 0.dp, 24.dp, 32.dp)) {
+                Text("Block a URL", style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(input, { input = it }, Modifier.fillMaxWidth(),
+                    label = { Text("URL or path (e.g. https://x.com/settings)") }, singleLine = true)
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        val p = input.trim()
+                        if (p.isNotEmpty()) { store.addUserRule(p); PolicyManager.reconcile(context) }
+                        sheetOpen = false; refresh()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Block") }
             }
         }
     }
