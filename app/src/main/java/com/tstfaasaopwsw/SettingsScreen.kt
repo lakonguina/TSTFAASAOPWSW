@@ -27,8 +27,8 @@ internal fun SettingsScreen(snap: Snapshot, refresh: () -> Unit) {
                 title = "Filter the whole phone",
                 subtitle = if (snap.firewallEnabled) "On — blocked sites are blocked in every app"
                 else "Off — only this app's browser filters",
-                checked = snap.firewallEnabled,
-                pending = null,
+                checked = snap.firewallEnabled && snap.pendingFirewall == null,
+                pending = snap.pendingFirewall?.let { "Turns off ${countdown(it)}" },
                 onChange = { on -> FirewallPolicy.setFirewall(context, on); refresh() },
             )
         }

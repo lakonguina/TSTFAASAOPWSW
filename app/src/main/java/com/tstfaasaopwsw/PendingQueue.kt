@@ -53,5 +53,6 @@ class PendingQueue(private val sp: SharedPreferences) {
         const val DD = "DD" // lower the delay      (payload = minutes)
         const val WR = "WR" // remove a web rule    (payload = pattern)
         const val ED = "ED" // disable a hide rule  (payload = element id)
+        const val FW = "FW" // turn off the firewall (payload = "")
     }
 }

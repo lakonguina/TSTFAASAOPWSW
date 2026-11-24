@@ -15,6 +15,7 @@ internal data class Snapshot(
     val pendingUnblock: Map<String, Long>,
     val pendingWebRemoval: Map<String, Long>,
     val pendingElement: Map<String, Long>,
+    val pendingFirewall: Long?,
 )
 
 internal fun buildSnapshot(context: Context): Snapshot {
@@ -32,5 +33,6 @@ internal fun buildSnapshot(context: Context): Snapshot {
         pendingUnblock = store.pendingUnblocks(),
         pendingWebRemoval = store.pendingWebRemovals(),
         pendingElement = store.pendingElements(),
+        pendingFirewall = store.pendingFirewallAt(),
     )
 }

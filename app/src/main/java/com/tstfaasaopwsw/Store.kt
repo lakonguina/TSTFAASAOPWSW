@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.tstfaasaopwsw.PendingQueue.Companion.DD
 import com.tstfaasaopwsw.PendingQueue.Companion.ED
+import com.tstfaasaopwsw.PendingQueue.Companion.FW
 import com.tstfaasaopwsw.PendingQueue.Companion.UB
 import com.tstfaasaopwsw.PendingQueue.Companion.WR
 
@@ -56,6 +57,7 @@ class Store private constructor(internal val sp: SharedPreferences) {
     fun pendingUnblockAt(pkg: String) = pending.at(UB, pkg)
     fun pendingWebRemovalAt(pattern: String) = pending.at(WR, pattern)
     fun pendingElementAt(id: String) = pending.at(ED, id)
+    fun pendingFirewallAt(): Long? = pending.at(FW, "")
     fun pendingUnblocks(): Map<String, Long> = pending.byKind(UB)
     fun pendingWebRemovals(): Map<String, Long> = pending.byKind(WR)
     fun pendingElements(): Map<String, Long> = pending.byKind(ED)
@@ -69,15 +71,18 @@ class Store private constructor(internal val sp: SharedPreferences) {
     }
 
     private fun applyDue(due: List<Triple<String, String, Long>>) {
-        var b = blocked; var ib = installBlocked; var w = blockedWeb; var e = enabledElements; var d = delayMinutes
+        var b = blocked; var ib = installBlocked; var w = blockedWeb; var e = enabledElements
+        var d = delayMinutes; var fw = firewallEnabled
         for ((kind, payload, _) in due) when (kind) {
             UB -> { b = b - payload; ib = ib - payload }
             WR -> w = w - payload
             ED -> e = e - payload
+            FW -> fw = false
             DD -> d = payload.toLong()
         }
         sp.edit().putStringSet(K_BLOCKED, b).putStringSet(K_INSTALL_BLOCK, ib)
-            .putStringSet(K_WEB, w).putStringSet(K_ELEM, e).putLong(K_DELAY, d).apply()
+            .putStringSet(K_WEB, w).putStringSet(K_ELEM, e)
+            .putBoolean(K_FW, fw).putLong(K_DELAY, d).apply()
     }
 
     companion object {

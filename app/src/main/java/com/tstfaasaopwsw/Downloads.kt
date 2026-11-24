@@ -19,6 +19,14 @@ object Downloads {
         }
     }.getOrNull()
 
+    /** Body of a GET request as raw bytes, or null on failure / non-2xx HTTP. */
+    fun getBytes(url: String): ByteArray? = runCatching {
+        open(url).run {
+            if (responseCode !in 200..299) return null
+            inputStream.use { it.readBytes() }
+        }
+    }.getOrNull()
+
     /** Downloads [url] to an internal file and returns the file, or null. */
     fun toApk(context: Context, url: String): File? = runCatching {
         val out = File(context.filesDir, "update.apk")

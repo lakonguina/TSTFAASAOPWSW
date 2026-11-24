@@ -13,7 +13,14 @@ import android.os.Build
  */
 object FirewallPolicy {
 
-    fun setFirewall(context: Context, enabled: Boolean, lockdown: Boolean = false) {
+    /** Records the intent (deferred when loosening), then lets [PolicyManager] push it. */
+    fun setFirewall(context: Context, enabled: Boolean) {
+        Store.get(context).requestFirewall(enabled)
+        PolicyManager.reconcile(context)
+    }
+
+    /** Pushes the given state to the device. Idempotent; called from [PolicyManager.reconcile]. */
+    fun apply(context: Context, enabled: Boolean, lockdown: Boolean = false) {
         val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val admin = AdminReceiver.componentName(context)
         val pkg = context.packageName
@@ -26,7 +33,6 @@ object FirewallPolicy {
                 dpm.setAlwaysOnVpnPackage(admin, null, false)
             }
         }
-        Store.get(context).setFirewallEnabled(enabled)
     }
 
     /**

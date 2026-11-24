@@ -34,14 +34,15 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -137,16 +138,18 @@ private fun statusLine(s: ServiceInfo, appOn: Boolean, webOn: Boolean): String {
     return listOfNotNull(app, web).joinToString(" · ")
 }
 
-/** Bundled logo if the catalog provides one, else the installed app icon, else a lettered circle. */
+/** The site's own favicon when available, else the installed app icon, else a lettered circle. */
 @Composable
 internal fun ServiceIcon(service: ServiceInfo, size: Dp) {
-    val icon = service.icon
-    when {
-        service.logoRes != null -> Image(
-            painterResource(service.logoRes), service.label, Modifier.size(size).clip(RoundedCornerShape(size / 4)),
-        )
-        icon != null -> Image(icon, null, Modifier.size(size))
-        else -> Box(
+    val context = LocalContext.current
+    val favicon by produceState<ImageBitmap?>(null, service.domain) {
+        value = service.domain?.let { Favicons.of(context, it) }
+    }
+    val icon = favicon ?: service.icon
+    if (icon != null) {
+        Image(icon, null, Modifier.size(size).clip(RoundedCornerShape(size / 4)))
+    } else {
+        Box(
             Modifier.size(size).clip(RoundedCornerShape(size / 4))
                 .background(MaterialTheme.colorScheme.secondaryContainer),
             Alignment.Center,

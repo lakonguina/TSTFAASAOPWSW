@@ -30,6 +30,7 @@ object PolicyManager {
         }
         applyAppBlocks(dpm, admin, store, lines)
         ElementHider.sync(store) // matured hide-rule disables take effect if the browser is live
+        FirewallPolicy.apply(context, store.firewallEnabled)
         hardenAndDefaultBrowser(dpm, admin, pkg, lines)
         PolicyAlarm.schedule(context, nextWake)
         if (nextWake != null) {
