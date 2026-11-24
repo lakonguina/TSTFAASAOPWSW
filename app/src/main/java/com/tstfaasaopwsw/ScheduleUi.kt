@@ -1,22 +1,29 @@
 package com.tstfaasaopwsw
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -26,67 +33,111 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
- * "Allowed hours" control for one facet (its [key]). Shows the current daily window and
- * opens a dialog to set or clear it. Outside the window the facet is blocked; the change
- * is applied through [PolicyManager.reconcile] so apps re-hide and the boundary alarm is
- * rescheduled at once.
+ * One facet row: title, a small line under it summarising the block state plus the daily
+ * schedule (allowed hours + minutes/day), a block [Switch] on the right and a clock button
+ * that opens a sheet to set the window and the daily limit together. The quota is stored
+ * and shown; its enforcement (usage measurement) is not wired yet.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AllowedHoursRow(key: String, snap: Snapshot, refresh: () -> Unit) {
+internal fun RuleRow(
+    key: String,
+    title: String,
+    checked: Boolean,
+    pending: String?,
+    onChange: (Boolean) -> Unit,
+    snap: Snapshot,
+    refresh: () -> Unit,
+) {
     val context = LocalContext.current
     val store = remember { Store.get(context) }
     val window = remember(snap) { store.windowFor(key) }
-    var editing by remember { mutableStateOf(false) }
+    val quota = remember(snap) { store.quotaFor(key) }
+    var sheetOpen by remember { mutableStateOf(false) }
 
     ListItem(
-        modifier = Modifier.clickable { editing = true },
-        leadingContent = { Icon(Icons.Filled.DateRange, null) },
-        headlineContent = { Text("Allowed hours") },
+        headlineContent = { Text(title) },
         supportingContent = {
-            Text(if (window == null) "Always" else "${hhmm(window.startMin)} – ${hhmm(window.endMin)}, blocked otherwise")
+            Text(
+                pending ?: summary(window, quota),
+                style = MaterialTheme.typography.labelSmall,
+                color = if (pending != null) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { sheetOpen = true }) { Icon(Icons.Filled.DateRange, "Limit access") }
+                Switch(checked = checked, onCheckedChange = onChange)
+            }
         },
     )
 
-    if (editing) {
-        val apply: (Window?) -> Unit = { w ->
-            store.setWindow(key, w); PolicyManager.reconcile(context); editing = false; refresh()
+    if (sheetOpen) {
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(onDismissRequest = { sheetOpen = false }, sheetState = sheetState) {
+            ScheduleSheet(title, window, quota) { w, q ->
+                store.setWindow(key, w); store.setQuota(key, q)
+                PolicyManager.reconcile(context); sheetOpen = false; refresh()
+            }
         }
-        WindowDialog(window, onDismiss = { editing = false }, onApply = apply)
     }
 }
 
+private fun summary(window: Window?, quota: Int?): String {
+    val hours = if (window == null) "Always" else "${hhmm(window.startMin)}–${hhmm(window.endMin)}"
+    val limit = quota?.let { "$it min/day" } ?: "no daily limit"
+    return "$hours · $limit"
+}
+
 @Composable
-private fun WindowDialog(current: Window?, onDismiss: () -> Unit, onApply: (Window?) -> Unit) {
-    var startH by remember { mutableIntStateOf((current?.startMin ?: 480) / 60) }
-    var endH by remember { mutableIntStateOf((current?.endMin ?: 1320) / 60) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Allowed hours") },
-        text = {
-            Column {
-                HourStepper("From", startH) { startH = it.coerceIn(0, 23) }
-                HourStepper("To", endH) { endH = it.coerceIn(1, 24) }
-            }
-        },
-        confirmButton = { TextButton(onClick = { onApply(Window(startH * 60, endH * 60)) }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = { onApply(null) }) { Text("No limit") } },
-    )
+private fun ScheduleSheet(title: String, window: Window?, quota: Int?, onApply: (Window?, Int?) -> Unit) {
+    var startH by remember { mutableIntStateOf((window?.startMin ?: 480) / 60) }
+    var endH by remember { mutableIntStateOf((window?.endMin ?: 1320) / 60) }
+    var minutes by remember { mutableStateOf(quota?.toString() ?: "") }
+
+    Column(Modifier.fillMaxWidth().padding(24.dp, 0.dp, 24.dp, 32.dp)) {
+        Text("Limit access — $title", style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(8.dp))
+        Text("Allowed hours", style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HourStepper("From", startH) { startH = it.coerceIn(0, 23) }
+        HourStepper("To", endH) { endH = it.coerceIn(1, 24) }
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = minutes,
+            onValueChange = { s -> minutes = s.filter { it.isDigit() }.take(4) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Daily limit (minutes, blank = none)") },
+            singleLine = true,
+        )
+        Spacer(Modifier.height(16.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { onApply(null, null) }, modifier = Modifier.weight(1f)) { Text("No limit") }
+            Button(
+                onClick = { onApply(Window(startH * 60, endH * 60), minutes.toIntOrNull()) },
+                modifier = Modifier.weight(1f),
+            ) { Text("Save") }
+        }
+    }
 }
 
 @Composable
 private fun HourStepper(label: String, hour: Int, onChange: (Int) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        Modifier.fillMaxWidth().padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge)
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { onChange(hour - 1) }) { Icon(Icons.Filled.KeyboardArrowDown, "minus") }
-            Text(hhmm(hour * 60), style = MaterialTheme.typography.titleMedium)
+            Text(hhmm(hour * 60), style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(56.dp))
             IconButton(onClick = { onChange(hour + 1) }) { Icon(Icons.Filled.KeyboardArrowUp, "plus") }
         }
     }

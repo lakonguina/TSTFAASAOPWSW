@@ -6,16 +6,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -52,8 +56,10 @@ internal fun BlockHost(onHome: () -> Unit) {
 
     val snapshot = remember(tick) { buildSnapshot(context) }
     val refresh: () -> Unit = { tick++ }
+    val store = remember { Store.get(context) }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var openedKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var editing by rememberSaveable { mutableStateOf(false) }
     val services = produceState<List<ServiceInfo>?>(initialValue = null, appsEpoch, tick) { value = loadServices(context) }
     val opened = services.value?.firstOrNull { it.key == openedKey }
     if (opened != null) BackHandler { openedKey = null }
@@ -66,6 +72,14 @@ internal fun BlockHost(onHome: () -> Unit) {
                     val back = opened != null
                     IconButton(onClick = { if (back) openedKey = null else onHome() }) {
                         Icon(Icons.Filled.ArrowBack, if (back) "Back" else "Home")
+                    }
+                },
+                actions = {
+                    if (opened?.editable == true) {
+                        IconButton(onClick = { editing = true }) { Icon(Icons.Filled.Edit, "Edit") }
+                        if (opened.deletable) IconButton(onClick = {
+                            store.removeService(opened.key); openedKey = null; refresh()
+                        }) { Icon(Icons.Filled.Delete, "Delete") }
                     }
                 },
             )
@@ -89,6 +103,16 @@ internal fun BlockHost(onHome: () -> Unit) {
                 tab == 0 -> ServicesScreen(services.value, snapshot, refresh, onOpen = { openedKey = it.key })
                 else -> SettingsScreen(snapshot, refresh)
             }
+        }
+    }
+
+    if (editing && opened != null) {
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(onDismissRequest = { editing = false }, sheetState = sheetState) {
+            ServiceForm(
+                initial = ServiceDef(opened.key, opened.label, opened.packages, opened.domain),
+                onSave = { def -> store.upsertService(def); editing = false; refresh() },
+            )
         }
     }
 }

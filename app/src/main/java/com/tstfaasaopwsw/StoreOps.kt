@@ -2,7 +2,6 @@ package com.tstfaasaopwsw
 
 import com.tstfaasaopwsw.PendingQueue.Companion.DD
 import com.tstfaasaopwsw.PendingQueue.Companion.ED
-import com.tstfaasaopwsw.PendingQueue.Companion.FW
 import com.tstfaasaopwsw.PendingQueue.Companion.UB
 import com.tstfaasaopwsw.PendingQueue.Companion.WR
 import com.tstfaasaopwsw.Store.Companion.K_BLOCKED
@@ -48,15 +47,6 @@ fun Store.enableElement(id: String) {
 fun Store.disableElement(id: String) {
     if (delayMinutes <= 0L) putSets(K_ELEM to enabledElements - id)
     else if (pendingElementAt(id) == null && id in enabledElements) pending.add(ED, id, effective())
-}
-
-// --- firewall (turning on = tighten/immediate; turning off = loosen/deferred) ---
-fun Store.requestFirewall(on: Boolean) {
-    when {
-        on -> { pending.cancel(FW, ""); setFirewallEnabled(true) }
-        delayMinutes <= 0L -> setFirewallEnabled(false)
-        pendingFirewallAt() == null && firewallEnabled -> pending.add(FW, "", effective())
-    }
 }
 
 // --- delay (raising = immediate; lowering = deferred) ---

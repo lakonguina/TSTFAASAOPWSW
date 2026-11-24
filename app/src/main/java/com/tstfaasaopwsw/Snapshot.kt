@@ -9,13 +9,11 @@ internal data class Snapshot(
     val blocked: Set<String>,
     val blockedWeb: Set<String>,
     val enabledElements: Set<String>,
-    val firewallEnabled: Boolean,
     val delayMinutes: Long,
     val pendingDelay: Pair<Long, Long>?,
     val pendingUnblock: Map<String, Long>,
     val pendingWebRemoval: Map<String, Long>,
     val pendingElement: Map<String, Long>,
-    val pendingFirewall: Long?,
 )
 
 internal fun buildSnapshot(context: Context): Snapshot {
@@ -27,12 +25,10 @@ internal fun buildSnapshot(context: Context): Snapshot {
         blocked = store.blocked,
         blockedWeb = store.blockedWeb,
         enabledElements = store.enabledElements,
-        firewallEnabled = store.firewallEnabled,
         delayMinutes = store.delayMinutes,
         pendingDelay = store.pendingDelay(),
         pendingUnblock = store.pendingUnblocks(),
         pendingWebRemoval = store.pendingWebRemovals(),
         pendingElement = store.pendingElements(),
-        pendingFirewall = store.pendingFirewallAt(),
     )
 }

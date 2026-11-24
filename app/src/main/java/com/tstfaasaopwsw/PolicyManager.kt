@@ -30,7 +30,7 @@ object PolicyManager {
         }
         applyAppBlocks(dpm, admin, store, lines)
         ElementHider.sync(store) // matured hide-rule disables take effect if the browser is live
-        FirewallPolicy.apply(context, store.firewallEnabled)
+        FirewallPolicy.apply(context, true) // filter always on; not user-toggleable
         hardenAndDefaultBrowser(dpm, admin, pkg, lines)
         val wake = listOfNotNull(nextWake, store.nextWindowBoundaryMillis()).minOrNull()
         PolicyAlarm.schedule(context, wake)

@@ -25,7 +25,26 @@ object ScheduleKeys {
 }
 
 private const val K_WINDOWS = "windows"
+private const val K_QUOTAS = "quotas"
 private const val SEP = "\u001F"
+
+/**
+ * Daily allowed minutes per facet (same keys as the windows). Stored and shown now; the
+ * usage measurement that enforces it (browser timing + UsageStatsManager) is the next
+ * step, so a quota is recorded but not yet blocking.
+ */
+fun Store.quotas(): Map<String, Int> =
+    sp.getStringSet(K_QUOTAS, emptySet())!!.mapNotNull { row ->
+        val p = row.split(SEP); if (p.size == 2) p[1].toIntOrNull()?.let { p[0] to it } else null
+    }.toMap()
+
+fun Store.quotaFor(key: String): Int? = quotas()[key]
+
+fun Store.setQuota(key: String, minutes: Int?) {
+    val rows = quotas().toMutableMap()
+    if (minutes == null || minutes <= 0) rows.remove(key) else rows[key] = minutes
+    sp.edit().putStringSet(K_QUOTAS, rows.map { "${it.key}$SEP${it.value}" }.toSet()).apply()
+}
 
 fun Store.windows(): Map<String, Window> =
     sp.getStringSet(K_WINDOWS, emptySet())!!.mapNotNull { row ->
