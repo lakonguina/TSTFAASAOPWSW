@@ -1,53 +1,68 @@
 package com.tstfaasaopwsw
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 
-/** General tab: status + reflection delay (the picker lives in [DelayPicker]). */
+/** General tab: a status hero, then an iOS-style grouped "Reflection delay" section. */
 @Composable
 internal fun SettingsScreen(snap: Snapshot, refresh: () -> Unit) {
     val context = LocalContext.current
     val store = remember { Store.get(context) }
+    val insets = GlassContentInsets
 
-    LazyColumn(Modifier.fillMaxSize()) {
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = insets.calculateTopPadding(), bottom = insets.calculateBottomPadding()),
+    ) {
+        item { GlassLargeTitle("General") }
         item { StatusCard(snap) }
         item { SectionHeader("Reflection delay") }
         item {
-            Text(
-                "Current: ${Config.formatDelay(snap.delayMinutes)}",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(16.dp, 0.dp),
-            )
-        }
-        snap.pendingDelay?.let { (v, at) ->
-            item {
-                Box(Modifier.padding(16.dp, 2.dp)) {
-                    Text(
-                        "→ changes to ${Config.formatDelay(v)} ${countdown(at)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+            GlassCard(Modifier.fillMaxWidth().padding(horizontal = Space.lg)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Current", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            Config.formatDelay(snap.delayMinutes),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    snap.pendingDelay?.let { (v, at) ->
+                        Text(
+                            "→ changes to ${Config.formatDelay(v)} ${countdownLive(at)}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    DelayPicker(snap.delayMinutes) { store.requestDelay(it); refresh() }
                 }
             }
         }
-        item { DelayPicker(snap.delayMinutes) { store.requestDelay(it); refresh() } }
         item {
             Text(
-                "Raising the delay (or blocking an app) takes effect immediately. Lowering it " +
-                    "— or unblocking — only takes effect after the current delay: until then, " +
-                    "it stays locked.",
+                "Raising the delay (or blocking an app) takes effect immediately. Lowering it — " +
+                    "or unblocking — only takes effect after the current delay: until then, it stays locked.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(16.dp, 8.dp, 16.dp, 16.dp),
+                modifier = Modifier.padding(Space.xl, Space.md, Space.xl, Space.lg),
             )
         }
     }

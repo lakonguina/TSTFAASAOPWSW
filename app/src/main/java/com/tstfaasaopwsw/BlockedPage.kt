@@ -1,7 +1,9 @@
 package com.tstfaasaopwsw
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,32 +24,31 @@ import androidx.compose.ui.unit.dp
 /** Full screen shown in place of a page refused by the block list. */
 @Composable
 internal fun BlockedPage(url: String, onDismiss: () -> Unit) {
-    Surface(Modifier.fillMaxSize()) {
-        Column(
-            Modifier.fillMaxSize().padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Icon(
-                Icons.Filled.Lock, null,
-                Modifier.size(56.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Text("Site blocked", style = MaterialTheme.typography.titleLarge)
-            Text(
-                url,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                maxLines = 2, overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                "This page is in your block list.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            OutlinedButton(onClick = onDismiss) { Text("Back") }
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+        Box(Modifier.fillMaxSize().padding(Space.xl), contentAlignment = Alignment.Center) {
+            GlassCard(shape = GlassShape.card, padding = PaddingValues(Space.xxl)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(Space.md),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(Icons.Filled.Lock, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text("Site blocked", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        url,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        "This page is in your block list.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    OutlinedButton(onClick = onDismiss, shape = GlassShape.pill) { Text("Back") }
+                }
+            }
         }
     }
 }

@@ -1,9 +1,10 @@
 import java.io.FileInputStream
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    id("com.android.application") // Kotlin intégré depuis AGP 9
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 // Secrets de signature chargés depuis keystore.properties (hors git).
@@ -16,7 +17,7 @@ val hasReleaseKeystore = keystoreProps.getProperty("storeFile") != null
 
 android {
     namespace = "com.tstfaasaopwsw"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.tstfaasaopwsw"
@@ -57,31 +58,36 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
     buildFeatures {
         compose = true
         buildConfig = true // expose BuildConfig.VERSION_CODE à l'updater
     }
-    composeOptions {
-        // Compilateur Compose compatible Kotlin 1.9.24.
-        kotlinCompilerExtensionVersion = "1.5.14"
+    // Le compilateur Compose vient maintenant du plugin org.jetbrains.kotlin.plugin.compose
+    // (Kotlin 2.x) ; plus de kotlinCompilerExtensionVersion à épingler.
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
 dependencies {
-    // UI : Jetpack Compose + Material 3 (Material You).
-    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    // UI : Jetpack Compose + Material 3 (Material You). BOM aligné sur Compose 1.12
+    // (ui 1.12.1 / material3 1.4.0), requis par la lib liquid glass ci-dessous.
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.material:material-icons-core")
-    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // Liquid glass iOS-style (RenderEffect / AGSL) : effet verre réel, Android 12+/13+.
+    implementation("io.github.kyant0:backdrop:2.0.1")
 
     // Navigateur embarqué : GeckoView (moteur Firefox). Version ESR 128, compatible
     // compileSdk 34. C'est la seule base Android qui laisse l'app filtrer la navigation.

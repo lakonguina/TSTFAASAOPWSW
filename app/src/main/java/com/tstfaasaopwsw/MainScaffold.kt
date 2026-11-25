@@ -3,23 +3,10 @@ package com.tstfaasaopwsw
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -29,14 +16,18 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
-/** Blocking screen: apps, web, settings (bottom tabs) + back to home. */
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Blocking section: Apps and General screens with their own large titles, plus a small,
+ * centered glass segmented bar (Web · Apps · General) as the only chrome. "Web" returns to
+ * the browser, so the browser is just another destination in the same menu.
+ */
 @Composable
 internal fun BlockHost(onHome: () -> Unit) {
     val context = LocalContext.current
@@ -44,8 +35,6 @@ internal fun BlockHost(onHome: () -> Unit) {
     var tick by remember { mutableIntStateOf(0) }
     var appsEpoch by remember { mutableIntStateOf(0) }
 
-    // Returning to the foreground (e.g. back from the Play Store) reloads the state AND
-    // the app list, so recent installs show up without relaunching the app.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) { tick++; appsEpoch++ }
@@ -64,51 +53,37 @@ internal fun BlockHost(onHome: () -> Unit) {
     val opened = services.value?.firstOrNull { it.key == openedKey }
     if (opened != null) BackHandler { openedKey = null }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(opened?.label ?: "Blocking") },
-                navigationIcon = {
-                    val back = opened != null
-                    IconButton(onClick = { if (back) openedKey = null else onHome() }) {
-                        Icon(Icons.Filled.ArrowBack, if (back) "Back" else "Home")
-                    }
-                },
-                actions = {
-                    if (opened?.editable == true) {
-                        IconButton(onClick = { editing = true }) { Icon(Icons.Filled.Edit, "Edit") }
-                        if (opened.deletable) IconButton(onClick = {
-                            store.removeService(opened.key); openedKey = null; refresh()
-                        }) { Icon(Icons.Filled.Delete, "Delete") }
-                    }
-                },
-            )
+    GlassScene(
+        content = {
+            Box(Modifier.fillMaxSize()) {
+                when {
+                    opened != null -> ServiceDetailScreen(
+                        opened, snapshot, refresh,
+                        onBack = { openedKey = null },
+                        onEdit = { editing = true },
+                        onDelete = { store.purgeService(opened); PolicyManager.reconcile(context); openedKey = null; refresh() },
+                    )
+                    tab == 0 -> ServicesScreen(services.value, snapshot, refresh, onOpen = { openedKey = it.key })
+                    else -> SettingsScreen(snapshot, refresh)
+                }
+            }
         },
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = tab == 0 && opened == null, onClick = { tab = 0; openedKey = null },
-                    icon = { Icon(Icons.Filled.Lock, null) }, label = { Text("Apps") },
-                )
-                NavigationBarItem(
-                    selected = tab == 1 && opened == null, onClick = { tab = 1; openedKey = null },
-                    icon = { Icon(Icons.Filled.Settings, null) }, label = { Text("General") },
+        chrome = {
+            if (opened == null) {
+                GlassSegmentedBar(
+                    tabs = listOf(
+                        GlassTab(Icons.Filled.Home, "Web", false, onHome),
+                        GlassTab(Icons.Filled.Lock, "Apps", tab == 0) { tab = 0 },
+                        GlassTab(Icons.Filled.Settings, "General", tab == 1) { tab = 1 },
+                    ),
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         },
-    ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
-            when {
-                opened != null -> ServiceDetailScreen(opened, snapshot, refresh)
-                tab == 0 -> ServicesScreen(services.value, snapshot, refresh, onOpen = { openedKey = it.key })
-                else -> SettingsScreen(snapshot, refresh)
-            }
-        }
-    }
+    )
 
     if (editing && opened != null) {
-        val sheetState = rememberModalBottomSheetState()
-        ModalBottomSheet(onDismissRequest = { editing = false }, sheetState = sheetState) {
+        GlassBottomSheet(onDismiss = { editing = false }, title = "Edit service") {
             ServiceForm(
                 initial = ServiceDef(opened.key, opened.label, opened.packages, opened.domain),
                 onSave = { def -> store.upsertService(def); editing = false; refresh() },

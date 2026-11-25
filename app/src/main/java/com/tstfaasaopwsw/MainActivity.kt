@@ -3,6 +3,7 @@ package com.tstfaasaopwsw
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 
 /**
  * Blocking screen (apps, web, settings), opened from the browser's Settings action. The
@@ -12,6 +13,7 @@ import androidx.activity.compose.setContent
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent { ForcelistTheme { BlockHost(onHome = { finish() }) } }
     }
 }

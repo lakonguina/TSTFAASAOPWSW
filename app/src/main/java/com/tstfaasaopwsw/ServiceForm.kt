@@ -28,18 +28,17 @@ internal fun ServiceForm(initial: ServiceDef?, onSave: (ServiceDef) -> Unit) {
     var pkg by rememberSaveable { mutableStateOf(initial?.packages?.joinToString(", ") ?: "") }
     var domain by rememberSaveable { mutableStateOf(initial?.domain ?: "") }
 
-    Column(Modifier.fillMaxWidth().padding(24.dp, 0.dp, 24.dp, 32.dp)) {
-        Text(if (initial == null) "New service" else "Edit service", style = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.height(16.dp))
+    // Title, padding and the glass frame come from the enclosing GlassSheet.
+    Column(Modifier.fillMaxWidth()) {
         OutlinedTextField(label, { label = it }, Modifier.fillMaxWidth(),
-            label = { Text("Name") }, singleLine = true)
-        Spacer(Modifier.height(12.dp))
+            label = { Text("Name") }, singleLine = true, shape = GlassShape.field)
+        Spacer(Modifier.height(Space.md))
         OutlinedTextField(pkg, { pkg = it }, Modifier.fillMaxWidth(),
-            label = { Text("Android package (e.g. com.twitter.android)") }, singleLine = true)
-        Spacer(Modifier.height(12.dp))
+            label = { Text("Android package (e.g. com.twitter.android)") }, singleLine = true, shape = GlassShape.field)
+        Spacer(Modifier.height(Space.md))
         OutlinedTextField(domain, { domain = it }, Modifier.fillMaxWidth(),
-            label = { Text("Website domain (e.g. x.com)") }, singleLine = true)
-        Spacer(Modifier.height(16.dp))
+            label = { Text("Website domain (e.g. x.com)") }, singleLine = true, shape = GlassShape.field)
+        Spacer(Modifier.height(Space.lg))
         val packages = pkg.split(",").map { it.trim() }.filter { it.isNotEmpty() }
         val dom = domain.trim().ifEmpty { null }
         val valid = label.isNotBlank() && (packages.isNotEmpty() || dom != null)

@@ -1,13 +1,26 @@
 package com.tstfaasaopwsw
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 
 /**
  * Per-service controls, grouped: an "Application" block (present when the service has a
@@ -17,11 +30,37 @@ import androidx.compose.ui.platform.LocalContext
  * service name and its edit/delete actions live in the top bar, not here.
  */
 @Composable
-internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: () -> Unit) {
+internal fun ServiceDetailScreen(
+    service: ServiceInfo,
+    snap: Snapshot,
+    refresh: () -> Unit,
+    onBack: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
     val context = LocalContext.current
     val store = remember { Store.get(context) }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    val insets = GlassContentInsets
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(top = insets.calculateTopPadding(), bottom = insets.calculateBottomPadding()),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(Space.md, Space.xs, Space.lg, Space.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Space.xs),
+        ) {
+            GlassIconButton(onBack, Icons.AutoMirrored.Filled.ArrowBack, "Back")
+            Text(
+                service.label,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (service.editable) GlassIconButton(onEdit, Icons.Filled.Edit, "Edit")
+            if (service.deletable) GlassIconButton(onDelete, Icons.Filled.Delete, "Delete", tint = Color(0xFFFF3B30))
+        }
         if (service.packages.isNotEmpty()) {
             SectionHeader("Application")
             val unblockAt = service.packages.firstNotNullOfOrNull { snap.pendingUnblock[it] }
@@ -29,7 +68,7 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                 key = ScheduleKeys.app(service.packages.first()),
                 title = "Block the app",
                 checked = service.packages.all { it in snap.blocked } && unblockAt == null,
-                pending = unblockAt?.let { "Unblock ${countdown(it)}" },
+                pendingAt = unblockAt, pendingVerb = "Unblock",
                 onChange = { on ->
                     service.packages.forEach { if (on) store.block(it) else store.unblock(it) }; refresh()
                 },
@@ -45,7 +84,7 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                 key = ScheduleKeys.web(domain),
                 title = "Block the whole site",
                 checked = domain in snap.blockedWeb && removalAt == null,
-                pending = removalAt?.let { "Unblock ${countdown(it)}" },
+                pendingAt = removalAt, pendingVerb = "Unblock",
                 onChange = { on -> if (on) store.blockWeb(domain) else store.unblockWeb(domain); refresh() },
                 snap = snap, refresh = refresh,
             )
@@ -55,7 +94,7 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                     key = ScheduleKeys.elem(rule.id),
                     title = rule.name,
                     checked = rule.id in snap.enabledElements && elemAt == null,
-                    pending = elemAt?.let { "Show again ${countdown(it)}" },
+                    pendingAt = elemAt, pendingVerb = "Show again",
                     onChange = { on ->
                         if (on) store.enableElement(rule.id) else store.disableElement(rule.id)
                         ElementHider.sync(store); refresh()
@@ -69,7 +108,7 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                     key = ScheduleKeys.web(pattern),
                     title = UrlRules.path(pattern).ifEmpty { pattern },
                     checked = pattern in snap.blockedWeb && removalAt == null,
-                    pending = removalAt?.let { "Unblock ${countdown(it)}" },
+                    pendingAt = removalAt, pendingVerb = "Unblock",
                     onChange = { on -> if (on) store.blockWeb(pattern) else store.unblockWeb(pattern); refresh() },
                     snap = snap, refresh = refresh,
                     onDelete = { store.deleteUserRule(pattern); PolicyManager.reconcile(context); refresh() },

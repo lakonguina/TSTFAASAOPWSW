@@ -26,8 +26,26 @@ internal data class ServiceInfo(
     val editable: Boolean,
     val customRules: List<String> = emptyList(),
 ) {
-    /** A user-defined service with no installed app can be deleted outright. */
-    val deletable: Boolean get() = editable && !installed
+    /**
+     * Deletable when it is something the user added by hand: a user-defined service with no
+     * installed app, or a hand-added site that matches no catalog service (web-only orphan).
+     * An installed app from the catalog or the launcher is never "deleted" from here.
+     */
+    val deletable: Boolean
+        get() = (editable && !installed) || (!editable && packages.isEmpty() && domain != null)
+}
+
+/**
+ * Removes a hand-added service entirely: its definition (if any) plus every web pattern filed
+ * under its host (the whole-site block and user rules). Honours the reflection delay, so with
+ * a delay set the removal is deferred like any other loosening.
+ */
+internal fun Store.purgeService(service: ServiceInfo) {
+    if (service.editable) removeService(service.key)
+    val host = service.domain ?: return
+    (blockedWeb + userRules()).filter { UrlRules.host(it) == host }.distinct().forEach { pattern ->
+        if (pattern in userRules()) deleteUserRule(pattern) else unblockWeb(pattern)
+    }
 }
 
 /**

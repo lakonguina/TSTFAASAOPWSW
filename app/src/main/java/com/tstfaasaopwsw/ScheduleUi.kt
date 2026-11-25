@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,7 +51,8 @@ internal fun RuleRow(
     key: String,
     title: String,
     checked: Boolean,
-    pending: String?,
+    pendingAt: Long?,
+    pendingVerb: String?,
     onChange: (Boolean) -> Unit,
     snap: Snapshot,
     refresh: () -> Unit,
@@ -66,9 +68,9 @@ internal fun RuleRow(
         headlineContent = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Text(
-                pending ?: summary(window, quota),
+                if (pendingAt != null) "$pendingVerb ${countdownLive(pendingAt)}" else summary(window, quota),
                 style = MaterialTheme.typography.labelSmall,
-                color = if (pending != null) MaterialTheme.colorScheme.primary
+                color = if (pendingAt != null) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
@@ -85,9 +87,8 @@ internal fun RuleRow(
     )
 
     if (sheetOpen) {
-        val sheetState = rememberModalBottomSheetState()
-        ModalBottomSheet(onDismissRequest = { sheetOpen = false }, sheetState = sheetState) {
-            ScheduleSheet(title, window, quota) { w, q ->
+        GlassBottomSheet(onDismiss = { sheetOpen = false }, title = "Limit access — $title") {
+            ScheduleSheet(window, quota) { w, q ->
                 store.setWindow(key, w); store.setQuota(key, q)
                 PolicyManager.reconcile(context); sheetOpen = false; refresh()
             }
@@ -120,24 +121,20 @@ internal fun WebSectionHeader(domain: String, refresh: () -> Unit) {
     }
 
     if (sheetOpen) {
-        val sheetState = rememberModalBottomSheetState()
-        ModalBottomSheet(onDismissRequest = { sheetOpen = false }, sheetState = sheetState) {
-            var input by remember { mutableStateOf("https://$domain/") }
-            Column(Modifier.fillMaxWidth().padding(24.dp, 0.dp, 24.dp, 32.dp)) {
-                Text("Block a URL", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(input, { input = it }, Modifier.fillMaxWidth(),
-                    label = { Text("URL or path (e.g. https://x.com/settings)") }, singleLine = true)
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        val p = input.trim()
-                        if (p.isNotEmpty()) { store.addUserRule(p); PolicyManager.reconcile(context) }
-                        sheetOpen = false; refresh()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Block") }
-            }
+        var input by remember { mutableStateOf("https://$domain/") }
+        GlassBottomSheet(onDismiss = { sheetOpen = false }, title = "Block a URL") {
+            OutlinedTextField(input, { input = it }, Modifier.fillMaxWidth(),
+                label = { Text("URL or path (e.g. https://x.com/settings)") }, singleLine = true, shape = GlassShape.field)
+            Spacer(Modifier.height(Space.lg))
+            Button(
+                onClick = {
+                    val p = input.trim()
+                    if (p.isNotEmpty()) { store.addUserRule(p); PolicyManager.reconcile(context) }
+                    sheetOpen = false; refresh()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = GlassShape.pill,
+            ) { Text("Block") }
         }
     }
 }
@@ -149,32 +146,32 @@ private fun summary(window: Window?, quota: Int?): String {
 }
 
 @Composable
-private fun ScheduleSheet(title: String, window: Window?, quota: Int?, onApply: (Window?, Int?) -> Unit) {
+private fun ScheduleSheet(window: Window?, quota: Int?, onApply: (Window?, Int?) -> Unit) {
     var startH by remember { mutableIntStateOf((window?.startMin ?: 480) / 60) }
     var endH by remember { mutableIntStateOf((window?.endMin ?: 1320) / 60) }
     var minutes by remember { mutableStateOf(quota?.toString() ?: "") }
 
-    Column(Modifier.fillMaxWidth().padding(24.dp, 0.dp, 24.dp, 32.dp)) {
-        Text("Limit access — $title", style = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.height(8.dp))
+    Column(Modifier.fillMaxWidth()) {
         Text("Allowed hours", style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         HourStepper("From", startH) { startH = it.coerceIn(0, 23) }
         HourStepper("To", endH) { endH = it.coerceIn(1, 24) }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Space.md))
         OutlinedTextField(
             value = minutes,
             onValueChange = { s -> minutes = s.filter { it.isDigit() }.take(4) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Daily limit (minutes, blank = none)") },
             singleLine = true,
+            shape = GlassShape.field,
         )
-        Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Spacer(Modifier.height(Space.lg))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
             TextButton(onClick = { onApply(null, null) }, modifier = Modifier.weight(1f)) { Text("No limit") }
             Button(
                 onClick = { onApply(Window(startH * 60, endH * 60), minutes.toIntOrNull()) },
                 modifier = Modifier.weight(1f),
+                shape = GlassShape.pill,
             ) { Text("Save") }
         }
     }

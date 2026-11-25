@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -62,28 +63,29 @@ internal fun ServicesScreen(services: List<ServiceInfo>?, snap: Snapshot, refres
     val q = query.trim()
     val filtered = services?.filter { q.isEmpty() || it.label.contains(q, true) || it.domain?.contains(q, true) == true }
 
+    val insets = GlassContentInsets
     Column(Modifier.fillMaxSize()) {
-        if (!snap.isDeviceOwner) OwnerWarning(snap.statusText)
-        Row(
-            Modifier.fillMaxWidth().padding(16.dp, 12.dp, 16.dp, 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.weight(1f),
-                leadingIcon = { Icon(Icons.Filled.Search, null) },
-                placeholder = { Text("Search a service") },
-                singleLine = true,
-            )
+        GlassLargeTitle("Apps", Modifier.padding(top = insets.calculateTopPadding())) {
             FilledTonalIconButton(onClick = { sheetOpen = true }) {
                 Icon(Icons.Filled.Add, "Block a site")
             }
         }
-        LazyColumn(Modifier.fillMaxSize()) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth().padding(Space.lg, Space.xs, Space.lg, Space.sm),
+            leadingIcon = { Icon(Icons.Filled.Search, null) },
+            placeholder = { Text("Search a service") },
+            singleLine = true,
+            shape = GlassShape.field,
+        )
+        if (!snap.isDeviceOwner) OwnerWarning(snap.statusText)
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = insets.calculateBottomPadding()),
+        ) {
             if (filtered == null) {
-                item { Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) { CircularProgressIndicator() } }
+                item { Box(Modifier.fillMaxWidth().padding(Space.xxl), Alignment.Center) { CircularProgressIndicator() } }
             } else {
                 items(filtered, key = { "svc:${it.key}" }) { s ->
                     val appOn = s.packages.isNotEmpty() && s.packages.all { it in snap.blocked }
@@ -101,38 +103,35 @@ internal fun ServicesScreen(services: List<ServiceInfo>?, snap: Snapshot, refres
     }
 
     if (sheetOpen) {
-        val sheetState = rememberModalBottomSheetState()
-        ModalBottomSheet(onDismissRequest = { sheetOpen = false }, sheetState = sheetState) {
-            AddSheet(
-                onBlockUrl = { p -> store.addUserRule(p); PolicyManager.reconcile(context); sheetOpen = false; refresh() },
-                onNewService = { def -> store.upsertService(def); sheetOpen = false; refresh() },
-            )
-        }
+        AddSheet(
+            onDismiss = { sheetOpen = false },
+            onBlockUrl = { p -> store.addUserRule(p); PolicyManager.reconcile(context); sheetOpen = false; refresh() },
+            onNewService = { def -> store.upsertService(def); sheetOpen = false; refresh() },
+        )
     }
 }
 
 /** The Apps-list "+" sheet: block a URL (auto-filed under the matching service) or create a service. */
 @Composable
-private fun AddSheet(onBlockUrl: (String) -> Unit, onNewService: (ServiceDef) -> Unit) {
+private fun AddSheet(onDismiss: () -> Unit, onBlockUrl: (String) -> Unit, onNewService: (ServiceDef) -> Unit) {
     var newService by remember { mutableStateOf(false) }
-    if (newService) {
-        ServiceForm(initial = null, onSave = onNewService)
-        return
-    }
     var url by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxWidth().padding(24.dp, 0.dp, 24.dp, 32.dp)) {
-        Text("Block a URL or site", style = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.height(16.dp))
-        OutlinedTextField(url, { url = it }, Modifier.fillMaxWidth(),
-            label = { Text("URL or domain (e.g. x.com/settings)") }, singleLine = true)
-        Spacer(Modifier.height(16.dp))
-        Button(
-            onClick = { val p = url.trim(); if (p.isNotEmpty()) onBlockUrl(p) },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Block") }
-        Spacer(Modifier.height(4.dp))
-        TextButton(onClick = { newService = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("New service instead")
+    GlassBottomSheet(onDismiss = onDismiss, title = if (newService) "New service" else "Block a URL or site") {
+        if (newService) {
+            ServiceForm(initial = null, onSave = onNewService)
+        } else {
+            OutlinedTextField(url, { url = it }, Modifier.fillMaxWidth(),
+                label = { Text("URL or domain (e.g. x.com/settings)") }, singleLine = true, shape = GlassShape.field)
+            Spacer(Modifier.height(Space.lg))
+            Button(
+                onClick = { val p = url.trim(); if (p.isNotEmpty()) onBlockUrl(p) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = GlassShape.pill,
+            ) { Text("Block") }
+            Spacer(Modifier.height(Space.xs))
+            TextButton(onClick = { newService = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("New service instead")
+            }
         }
     }
 }

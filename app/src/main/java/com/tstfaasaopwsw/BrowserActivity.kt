@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -20,6 +21,7 @@ class BrowserActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge() // web content runs full-bleed under the status/nav bars
         Updater.checkInBackground(this) // auto-update from GitHub (throttled)
         ElementHider.install(runtime(this), Store.get(this))
         val start = intent?.dataString?.takeIf { it.isNotBlank() }
