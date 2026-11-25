@@ -1,63 +1,57 @@
-# Architecture — ForceList
+# Architecture
 
-*Vue abstraite. Comment l'app fonctionne, sans entrer dans le code.*
+How the app works, short version.
 
-## Ce que l'app est
+## The one idea: one-way commitment
 
-Un outil d'auto-discipline. Tu poses des règles sur **ton propre** téléphone pour ne
-pas pouvoir les défaire sur un coup de tête. L'app en est le gardien : elle est
-**Device Owner** (le rôle d'administration le plus fort d'Android, posé une fois via
-`adb`), ce qui lui donne le droit de bloquer des apps, verrouiller des réglages et
-filtrer le réseau.
+The app stores your **intent** (rules + pending changes), not the machine state. A single
+idempotent function, `PolicyManager.reconcile`, replays on every open, alarm and reboot:
+it matures due pending changes (`PendingQueue`), then pushes the intent to the device.
 
-## Le principe unique : l'engagement à sens unique
+- **Tighten** (block, add a rule, narrow a window, raise the delay) → immediate.
+- **Loosen** (unblock, delete a rule, lower the delay) → deferred by the current reflection
+  delay; locked meanwhile, with a countdown.
 
-Toute règle suit la même loi, façon Pluckeye :
+## Services
 
-- **Serrer** (bloquer, ajouter un filtre, allonger un délai) → **immédiat**.
-- **Desserrer** (débloquer, retirer un filtre, raccourcir un délai) → **seulement après
-  le délai de réflexion** en cours. En attendant, ça reste verrouillé, et un compte à
-  rebours le montre.
+A **service** groups one product's app **packages** and website **domain** (e.g. Twitter/X =
+`com.twitter.android` + `x.com`). Services are editable data (`ServiceDef`), seeded once from
+`Config.catalog`: create, rename, change package/domain, delete (unless the app is installed).
+A service shows even when its app isn't installed, so its web rules can be set in advance and
+the app pre-blocked against future install. Logos are the site's favicon.
 
-C'est le cœur. Tout le reste n'est que de l'exécution.
+## Two screens
 
-## Les trois écrans (tout ce que l'utilisateur voit)
+- **Apps** — the services list. `+` blocks a URL (filed under the matching service) or creates
+  a service.
+- **General** — Device Owner status + the reflection delay.
 
-1. **Apps** — une liste avec un interrupteur par app : bloquée / autorisée. Plus le
-   contrôle des installations.
-2. **Web** — des listes : sites interdits, morceaux de page à cacher, sites « sous
-   contrôle » (accessibles seulement via le navigateur de l'app).
-3. **Délais** — le réglage du délai de réflexion.
+A service page has an **Application** block and a **Web** block (whole-site block, feed/navbar
+hide rules, and user-added URL rules). Each rule has a block switch, an optional daily
+**allowed-hours** window (enforced), and a daily **minutes quota** (stored and shown, not yet
+enforced). Built-in rules are fixed; user rules are editable and deletable.
 
-Pas d'intelligence derrière : juste des **toggles et des listes**. Chaque ligne appelle
-du code fixe qui active la bonne mécanique. L'usine en dessous est invisible.
+## Three enforcement surfaces, one brain
 
-## Comment ça marche dedans
-
-**Une seule source de vérité : l'intention.** L'app stocke ce que tu *veux* (règles +
-attentes en cours), pas l'état de la machine. Une fonction unique, **`reconcile`**,
-est rejouée à chaque ouverture, à chaque échéance de délai (alarme) et au redémarrage.
-Elle fait mûrir les attentes échues, puis pousse l'intention vers l'appareil. Elle est
-**idempotente** : la rejouer dix fois ne change rien, elle ne fait que réparer l'écart.
-
-**Trois surfaces d'exécution, un seul cerveau :**
-
-| Surface | Rôle | Portée |
+| Surface | Role | Scope |
 |---|---|---|
-| **Device Owner** | bloquer/geler des apps, filtrer les installations, verrouiller les portes de sortie | tout le téléphone |
-| **Pare-feu réseau** (VPN local) | bloquer un **domaine** ; réserver un site à notre navigateur | toutes les apps |
-| **Navigateur + filtre** | bloquer un **chemin** précis, cacher des morceaux de page | notre navigateur |
+| **Device Owner** | hide/freeze apps, block installs, lock exits | whole phone |
+| **DNS firewall** (local VPN, always on) | block a **domain** | all apps |
+| **Browser + extensions** | block a **path**, hide page parts | our browser |
 
-Règle de répartition : blocage **par domaine** = pare-feu (partout) ; **par chemin** ou
-**cosmétique** = navigateur (chez nous seulement). Un même blocage n'est jamais posé à
-deux endroits.
+Allowed-hours windows fold into effective blocked sets (`effectiveBlockedApps/Web`,
+`effectiveEnabledElements`) that these surfaces already enforce; `reconcile` reschedules an
+alarm at the next window edge.
 
-**L'invariant clé.** Un site « sous contrôle » (limité dans le temps, feed masqué…)
-n'est atteignable **que par notre navigateur** : le pare-feu le ferme à toutes les
-autres apps. Sinon le contrôle se contournerait via la fenêtre web d'une autre app.
+## Updates & escape
 
-## Les portes de sortie
+Auto-update from GitHub Releases: push tag `vN`, CI builds/signs/publishes, the app installs
+it silently (Device Owner). The dev phone runs a **debug** build (different signing key), so
+push to it with `adb install -r`. Escape hatch:
+`adb shell dpm remove-active-admin <pkg>/.AdminReceiver`.
 
-Fermées autant que possible : désinstallation bloquée, démarrage « sans échec »
-interdit, pare-feu verrouillé en always-on. **La seule issue reste un PC + `adb`** —
-friction volontaire, et plafond assumé de tout le système.
+## To do
+
+Enforce the daily minutes quota: measure real usage (browser timer for web,
+`UsageStatsManager` for apps, usage-access granted once, daily reset), show time left, block
+when exhausted.
