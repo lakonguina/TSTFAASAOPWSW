@@ -79,6 +79,9 @@ class Store private constructor(internal val sp: SharedPreferences) {
         }
         sp.edit().putStringSet(K_BLOCKED, b).putStringSet(K_INSTALL_BLOCK, ib)
             .putStringSet(K_WEB, w).putStringSet(K_ELEM, e).putLong(K_DELAY, d).apply()
+        // A matured web unblock of a user rule also retires the rule object (deferred delete).
+        val rules = userRules()
+        due.filter { it.first == WR && it.second in rules }.forEach { purgeUserRuleObject(it.second) }
     }
 
     companion object {

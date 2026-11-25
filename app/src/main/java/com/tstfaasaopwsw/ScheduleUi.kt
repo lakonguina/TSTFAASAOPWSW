@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
@@ -96,20 +95,29 @@ internal fun RuleRow(
     }
 }
 
-/** "Add a rule" entry under a service's Web section: block a specific URL on [domain]. */
+/**
+ * "WEB — <domain>" section header with a "+" button right next to the title to add a rule
+ * (block a specific URL on [domain]); the new rule is filed under this same service.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AddRuleRow(domain: String, refresh: () -> Unit) {
+internal fun WebSectionHeader(domain: String, refresh: () -> Unit) {
     val context = LocalContext.current
     val store = remember { Store.get(context) }
     var sheetOpen by remember { mutableStateOf(false) }
 
-    ListItem(
-        modifier = Modifier.clickable { sheetOpen = true },
-        leadingContent = { Icon(Icons.Filled.Add, null) },
-        headlineContent = { Text("Add a rule") },
-        supportingContent = { Text("Block a specific URL on $domain", style = MaterialTheme.typography.labelSmall) },
-    )
+    Row(
+        Modifier.fillMaxWidth().padding(16.dp, 16.dp, 8.dp, 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "WEB — $domain",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = { sheetOpen = true }) { Icon(Icons.Filled.Add, "Add a rule") }
+    }
 
     if (sheetOpen) {
         val sheetState = rememberModalBottomSheetState()

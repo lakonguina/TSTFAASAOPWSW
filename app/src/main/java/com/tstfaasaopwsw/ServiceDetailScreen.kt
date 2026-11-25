@@ -39,7 +39,7 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
 
         val domain = service.domain
         if (domain != null) {
-            SectionHeader("Web — $domain")
+            WebSectionHeader(domain, refresh)
             val removalAt = snap.pendingWebRemoval[domain]
             RuleRow(
                 key = ScheduleKeys.web(domain),
@@ -72,10 +72,9 @@ internal fun ServiceDetailScreen(service: ServiceInfo, snap: Snapshot, refresh: 
                     pending = removalAt?.let { "Unblock ${countdown(it)}" },
                     onChange = { on -> if (on) store.blockWeb(pattern) else store.unblockWeb(pattern); refresh() },
                     snap = snap, refresh = refresh,
-                    onDelete = { store.removeUserRule(pattern); PolicyManager.reconcile(context); refresh() },
+                    onDelete = { store.deleteUserRule(pattern); PolicyManager.reconcile(context); refresh() },
                 )
             }
-            AddRuleRow(domain, refresh)
         }
     }
 }

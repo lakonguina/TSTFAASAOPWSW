@@ -20,11 +20,25 @@ fun Store.addUserRule(pattern: String) {
     blockWeb(pattern)
 }
 
-/** Deletes a user rule outright: drops it and clears its block and schedule. */
+/**
+ * Deletes a rule honouring the reflection delay: immediate when the delay is 0, otherwise
+ * deferred like any other loosening (the block removal is queued, and when it matures the
+ * rule object itself is purged — see [Store.applyDue]). Until then the rule stays blocked.
+ */
+fun Store.deleteUserRule(pattern: String) {
+    if (delayMinutes <= 0L) removeUserRule(pattern) else unblockWeb(pattern)
+}
+
+/** Immediate full removal: drops the rule and clears its block and schedule. */
 fun Store.removeUserRule(pattern: String) {
-    sp.edit().putStringSet(K_USER_RULES, userRules() - pattern).apply()
     putSets(K_WEB to blockedWeb - pattern)
     pending.cancel(WR, pattern)
+    purgeUserRuleObject(pattern)
+}
+
+/** Drops the rule's bookkeeping (set membership + schedule) without touching [blockedWeb]. */
+fun Store.purgeUserRuleObject(pattern: String) {
+    sp.edit().putStringSet(K_USER_RULES, userRules() - pattern).apply()
     setWindow(ScheduleKeys.web(pattern), null)
     setQuota(ScheduleKeys.web(pattern), null)
 }
