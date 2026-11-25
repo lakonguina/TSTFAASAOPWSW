@@ -85,6 +85,26 @@ fun Store.effectiveEnabledElements(nowMin: Int = nowMinuteOfDay()): Set<String> 
 fun Store.windowedAppPackages(): Set<String> =
     windows().keys.filter { it.startsWith("app:") }.map { it.removePrefix("app:") }.toSet()
 
+/**
+ * Domains the firewall closes to every other app, so a controlled site is reachable only
+ * through our own (VPN-excluded) browser. A domain is controlled as soon as it has any web
+ * rule — a whole-site/path block, an enabled hide rule (feed), or a web/feed schedule —
+ * regardless of whether it happens to be allowed right now. Our browser keeps using
+ * [effectiveBlockedWeb], so a feed-only domain still opens there (with the feed hidden).
+ */
+fun Store.controlledDomains(): Set<String> {
+    val hosts = mutableSetOf<String>()
+    blockedWeb.forEach { hosts += UrlRules.host(it) }
+    enabledElements.forEach { hosts += it.substringBefore("|") }
+    (windows().keys + quotas().keys).forEach { key ->
+        when {
+            key.startsWith("web:") -> hosts += UrlRules.host(key.removePrefix("web:"))
+            key.startsWith("elem:") -> hosts += key.removePrefix("elem:").substringBefore("|")
+        }
+    }
+    return hosts.filter { it.isNotEmpty() }.toSet()
+}
+
 /** Epoch millis of the next window edge (any start or end), when the effective state flips. */
 fun Store.nextWindowBoundaryMillis(): Long? {
     val edges = windows().values.flatMap { listOf(it.startMin, it.endMin) }.toSortedSet()

@@ -14,7 +14,8 @@ import java.net.DatagramSocket
  * A local VPN that captures **DNS only**: we route to ourselves only the queries to our
  * virtual resolver ([VIRT_DNS]); everything else goes direct, so a failure of this service
  * does not cut the network. Each DNS query is filtered or relayed by [DnsFilter] (NXDOMAIN
- * if the domain contains a pattern from [Store.blockedWeb]).
+ * if the domain is one of [Store.controlledDomains] — any site we control, closed to every
+ * app but our own VPN-excluded browser).
  *
  * Accepted limit: it does not see encrypted DNS (DoH/DoT). [FirewallPolicy] therefore
  * forces "Private DNS" to opportunistic mode so DNS goes back to cleartext here.
@@ -66,7 +67,7 @@ class FilterVpnService : VpnService() {
             while (running) {
                 val n = input.read(buf)
                 if (n <= 0) continue
-                runCatching { DnsFilter.handle(buf, n, store.effectiveBlockedWeb(), output, upstream) }
+                runCatching { DnsFilter.handle(buf, n, store.controlledDomains(), output, upstream) }
             }
         } catch (_: Exception) {
             // tun closed / thread interrupted: normal end.
