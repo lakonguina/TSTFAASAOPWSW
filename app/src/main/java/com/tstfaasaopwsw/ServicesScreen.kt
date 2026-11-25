@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -88,7 +90,7 @@ internal fun ServicesScreen(services: List<ServiceInfo>?, snap: Snapshot, refres
                     val webOn = s.domain != null && s.domain in snap.blockedWeb
                     ListItem(
                         modifier = Modifier.clickable { onOpen(s) },
-                        leadingContent = { ServiceIcon(s, 40.dp) },
+                        leadingContent = { ServiceIconWithStatus(s, 40.dp) },
                         headlineContent = { Text(s.label) },
                         supportingContent = { Text(statusLine(s, appOn, webOn)) },
                         trailingContent = { Icon(Icons.Filled.KeyboardArrowRight, null) },
@@ -144,6 +146,30 @@ private fun statusLine(s: ServiceInfo, appOn: Boolean, webOn: Boolean): String {
     }
     val web = if (s.domain != null) (if (webOn) "site blocked" else "site allowed") else null
     return listOfNotNull(app, web).joinToString(" · ")
+}
+
+/**
+ * The service icon with an install badge: a green dot when the app is installed, red when
+ * not. Only for services that have an app side; web-only services carry no badge.
+ */
+@Composable
+internal fun ServiceIconWithStatus(service: ServiceInfo, size: Dp) {
+    Box {
+        ServiceIcon(service, size)
+        if (service.packages.isNotEmpty()) {
+            val color = if (service.installed) Color(0xFF34C759) else Color(0xFFFF3B30)
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(2.dp)
+                    .clip(CircleShape)
+                    .background(color),
+            )
+        }
+    }
 }
 
 /** The site's own favicon when available, else the installed app icon, else a lettered circle. */

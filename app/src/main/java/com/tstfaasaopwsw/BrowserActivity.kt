@@ -1,6 +1,7 @@
 package com.tstfaasaopwsw
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -19,12 +20,17 @@ class BrowserActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Updater.checkInBackground(this) // auto-update from GitHub (throttled)
         ElementHider.install(runtime(this), Store.get(this))
         val start = intent?.dataString?.takeIf { it.isNotBlank() }
         setContent {
             ForcelistTheme {
                 Surface(Modifier.fillMaxSize()) {
-                    Browser(runtime(this), Store.get(this), start, onExit = { finish() })
+                    Browser(
+                        runtime(this), Store.get(this), start,
+                        onSettings = { startActivity(Intent(this, MainActivity::class.java)) },
+                        onExit = { finish() },
+                    )
                 }
             }
         }

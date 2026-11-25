@@ -5,13 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 
 /**
- * Main screen: home springboard ([AppRoot]) leading to the Browser or Blocking
- * (apps, web, settings). Built with Jetpack Compose Material 3.
+ * Blocking screen (apps, web, settings), opened from the browser's Settings action. The
+ * app launches straight into [BrowserActivity]; this activity is the controls surface
+ * reached from there, and "back/home" returns to the browser.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Updater.checkInBackground(this) // auto-update from GitHub (throttled)
-        setContent { ForcelistTheme { AppRoot() } }
+        setContent { ForcelistTheme { BlockHost(onHome = { finish() }) } }
     }
 }

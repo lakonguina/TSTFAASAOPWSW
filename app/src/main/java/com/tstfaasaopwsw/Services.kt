@@ -54,9 +54,12 @@ internal suspend fun loadServices(context: Context): List<ServiceInfo> = withCon
         ServiceInfo(d.id, d.label, installedPkg?.iconOf(pm), d.packages, d.domain,
             installedPkg != null, true, d.domain?.let { rulesFor(it) } ?: emptyList())
     }
-    val fromApps = ((launchable - covered) - self).mapNotNull { pkg ->
+    // Launchable apps, plus any blocked app: a blocked app is hidden+suspended, so it drops
+    // out of the launcher query — listing it anyway keeps a handle to unblock it.
+    val appPkgs = ((launchable + store.blocked) - covered - self)
+    val fromApps = appPkgs.mapNotNull { pkg ->
         runCatching {
-            val ai = pm.getApplicationInfo(pkg, 0)
+            val ai = pm.getApplicationInfo(pkg, PackageManager.MATCH_UNINSTALLED_PACKAGES)
             ServiceInfo(pkg, pm.getApplicationLabel(ai).toString(),
                 pm.getApplicationIcon(ai).toSquareBitmap(), listOf(pkg), null, true, false)
         }.getOrNull()
@@ -69,8 +72,9 @@ internal suspend fun loadServices(context: Context): List<ServiceInfo> = withCon
     (fromDefs + fromApps + fromWeb).sortedBy { it.label.lowercase() }
 }
 
+// MATCH_UNINSTALLED_PACKAGES so a frozen (hidden) app still counts as installed.
 private fun String.isInstalled(pm: PackageManager): Boolean =
-    runCatching { pm.getApplicationInfo(this, 0); true }.getOrDefault(false)
+    runCatching { pm.getApplicationInfo(this, PackageManager.MATCH_UNINSTALLED_PACKAGES); true }.getOrDefault(false)
 
 private fun String.iconOf(pm: PackageManager): ImageBitmap? =
     runCatching { pm.getApplicationIcon(this).toSquareBitmap() }.getOrNull()

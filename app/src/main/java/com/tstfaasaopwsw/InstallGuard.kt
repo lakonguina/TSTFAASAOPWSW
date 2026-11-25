@@ -4,6 +4,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
 
@@ -34,6 +35,7 @@ class InstallGuard : BroadcastReceiver() {
         val store = Store.get(context)
         when {
             store.isInstallBlocked(pkg) -> store.block(pkg) // forbidden: frozen, no release
+            isSystemApp(context, pkg) -> return             // preinstalled (e.g. YouTube Music): trusted
             !fromKnownStore(context, pkg) -> {              // sideload: frozen then deferred release
                 store.block(pkg)
                 store.unblock(pkg) // immediate if delay = 0, otherwise matures after the delay
@@ -42,6 +44,11 @@ class InstallGuard : BroadcastReceiver() {
         }
         PolicyManager.reconcile(context)
     }
+
+    private fun isSystemApp(context: Context, pkg: String): Boolean = runCatching {
+        val flags = context.packageManager.getApplicationInfo(pkg, 0).flags
+        (flags and (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
+    }.getOrDefault(false)
 
     private fun fromKnownStore(context: Context, pkg: String): Boolean {
         val installer = runCatching {

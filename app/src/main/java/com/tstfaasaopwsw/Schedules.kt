@@ -76,10 +76,18 @@ fun Store.effectiveBlockedWeb(nowMin: Int = nowMinuteOfDay()): Set<String> {
     return blockedWeb + windowed.filter { w.blocksNow(ScheduleKeys.web(it), nowMin) }
 }
 
+/**
+ * Which feed/navbar elements are hidden right now. A window means "the surface is visible
+ * only inside these hours": for an element that has one, the window alone decides (hidden
+ * outside it, shown inside) — even if the manual hide toggle is on — so setting allowed
+ * hours on a feed lets it reappear during that window. Elements with no window fall back to
+ * the manual toggle.
+ */
 fun Store.effectiveEnabledElements(nowMin: Int = nowMinuteOfDay()): Set<String> {
     val w = windows()
-    val windowed = w.keys.filter { it.startsWith("elem:") }.map { it.removePrefix("elem:") }
-    return enabledElements + windowed.filter { w.blocksNow(ScheduleKeys.elem(it), nowMin) }
+    val windowed = w.keys.filter { it.startsWith("elem:") }.map { it.removePrefix("elem:") }.toSet()
+    val manual = enabledElements - windowed
+    return manual + windowed.filter { w.blocksNow(ScheduleKeys.elem(it), nowMin) }
 }
 
 fun Store.windowedAppPackages(): Set<String> =

@@ -18,6 +18,7 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
     var canGoBack by mutableStateOf(false)
     var canGoForward by mutableStateOf(false)
     var blocked by mutableStateOf<String?>(null) // refused URL to show, otherwise null
+    var scrollY by mutableIntStateOf(0) // vertical scroll; drives the Safari-style bar auto-hide
 
     init {
         session.navigationDelegate = object : GeckoSession.NavigationDelegate {
@@ -60,6 +61,11 @@ internal class Tab(runtime: GeckoRuntime, store: Store) {
         session.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onTitleChange(session: GeckoSession, title: String?) {
                 this@Tab.title = title ?: ""
+            }
+        }
+        session.scrollDelegate = object : GeckoSession.ScrollDelegate {
+            override fun onScrollChanged(session: GeckoSession, scrollX: Int, scrollY: Int) {
+                this@Tab.scrollY = scrollY
             }
         }
         session.open(runtime)
