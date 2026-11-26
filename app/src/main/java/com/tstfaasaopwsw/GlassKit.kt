@@ -22,7 +22,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -234,7 +236,9 @@ internal fun GlassBar(
     Row(
         modifier
             .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.navigationBars)
+            // Sit above the nav bar, and ride up above the on-screen keyboard when it opens
+            // (Safari-style) instead of being covered by it.
+            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
             .padding(Space.md, Space.sm, Space.md, Space.lg)
             .glass(GlassShape.pill)
             .padding(horizontal = Space.sm, vertical = Space.xs),
@@ -264,9 +268,9 @@ internal fun GlassSegmentedBar(tabs: List<GlassTab>, modifier: Modifier = Modifi
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(bottom = Space.lg)
             .glass(GlassShape.pill)
-            .padding(Space.xxs),
+            .padding(Space.xs),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Space.xxs),
+        horizontalArrangement = Arrangement.spacedBy(Space.sm),
     ) {
         tabs.forEach { t ->
             val color by animateColorAsState(
@@ -274,19 +278,19 @@ internal fun GlassSegmentedBar(tabs: List<GlassTab>, modifier: Modifier = Modifi
                 else MaterialTheme.colorScheme.onSurfaceVariant,
                 label = "segTint",
             )
-            Row(
+            Column(
                 Modifier
                     .background(
                         if (t.selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent,
                         GlassShape.pill,
                     )
                     .pressable(GlassShape.pill, onClick = t.onClick)
-                    .padding(horizontal = Space.md, vertical = Space.sm),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Space.xs),
+                    .padding(horizontal = Space.xl, vertical = Space.sm),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Space.xs),
             ) {
-                Icon(t.icon, t.label, tint = color, modifier = Modifier.size(18.dp))
-                Text(t.label, style = MaterialTheme.typography.labelLarge, color = color)
+                Icon(t.icon, t.label, tint = color, modifier = Modifier.size(22.dp))
+                Text(t.label, style = MaterialTheme.typography.labelMedium, color = color)
             }
         }
     }
@@ -333,7 +337,7 @@ val GlassContentInsets: PaddingValues
     @Composable get() {
         val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
         val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        return PaddingValues(top = top + Space.sm, bottom = bottom + 84.dp)
+        return PaddingValues(top = top + Space.sm, bottom = bottom + 96.dp)
     }
 
 /**
@@ -377,7 +381,9 @@ internal fun GlassBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(),
+        // Open straight to full height: a half-open detent would hide the lower actions and,
+        // with no drag handle, leave no way to raise it.
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Color.Transparent,
         dragHandle = null,
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
@@ -388,6 +394,7 @@ internal fun GlassBottomSheet(
             ) {
                 Box(
                     Modifier
+                        .align(Alignment.CenterHorizontally)
                         .padding(bottom = Space.lg)
                         .size(width = 36.dp, height = 4.dp)
                         .background(
@@ -396,8 +403,14 @@ internal fun GlassBottomSheet(
                         ),
                 )
                 if (title != null) {
-                    Text(title, style = MaterialTheme.typography.titleLarge)
-                    Box(Modifier.size(Space.lg))
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                    Box(Modifier.size(Space.md))
                 }
                 content()
             }

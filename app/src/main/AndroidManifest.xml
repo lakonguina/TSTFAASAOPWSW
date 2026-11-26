@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Mesure du temps d'usage par app (quota minutes). Accordée une fois via
+         "Accès aux données d'utilisation" ; sans elle, un quota app ne s'applique pas. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
     <!-- Mise à jour auto depuis GitHub : télécharger l'APK puis l'installer. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Device Owner qui doit pouvoir lister et bloquer n'importe quelle app :
@@ -28,7 +34,7 @@
             android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTask"
-            android:windowSoftInputMode="adjustPan">
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

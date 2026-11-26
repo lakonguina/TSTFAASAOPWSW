@@ -67,13 +67,20 @@ private fun Map<String, Window>.blocksNow(key: String, nowMin: Int): Boolean =
 fun Store.effectiveBlockedApps(nowMin: Int = nowMinuteOfDay()): Set<String> {
     val w = windows()
     val windowed = w.keys.filter { it.startsWith("app:") }.map { it.removePrefix("app:") }
-    return blocked + windowed.filter { w.blocksNow(ScheduleKeys.app(it), nowMin) }
+    // An app is also closed outside its list's hours (list quota governs web/feed, not apps).
+    val listBlocked = activeFacets().filter { it.startsWith("app:") && listBlocksFacet(it, nowMin, quotaCounts = false) }
+        .map { it.removePrefix("app:") }
+    return blocked + windowed.filter { w.blocksNow(ScheduleKeys.app(it), nowMin) } + listBlocked
 }
 
 fun Store.effectiveBlockedWeb(nowMin: Int = nowMinuteOfDay()): Set<String> {
     val w = windows()
     val windowed = w.keys.filter { it.startsWith("web:") }.map { it.removePrefix("web:") }
-    return blockedWeb + windowed.filter { w.blocksNow(ScheduleKeys.web(it), nowMin) }
+    val quotaSpent = quotas().keys.filter { it.startsWith("web:") && quotaExhausted(it) }.map { it.removePrefix("web:") }
+    // The facet's list can also close it: the list's hours (window) or its shared quota.
+    val listBlocked = activeFacets().filter { it.startsWith("web:") && listBlocksFacet(it, nowMin, quotaCounts = true) }
+        .map { it.removePrefix("web:") }
+    return blockedWeb + windowed.filter { w.blocksNow(ScheduleKeys.web(it), nowMin) } + quotaSpent + listBlocked
 }
 
 /**
@@ -87,7 +94,10 @@ fun Store.effectiveEnabledElements(nowMin: Int = nowMinuteOfDay()): Set<String> 
     val w = windows()
     val windowed = w.keys.filter { it.startsWith("elem:") }.map { it.removePrefix("elem:") }.toSet()
     val manual = enabledElements - windowed
-    return manual + windowed.filter { w.blocksNow(ScheduleKeys.elem(it), nowMin) }
+    val quotaHidden = quotas().keys.filter { it.startsWith("elem:") && quotaExhausted(it) }.map { it.removePrefix("elem:") }
+    val listHidden = activeFacets().filter { it.startsWith("elem:") && listBlocksFacet(it, nowMin, quotaCounts = true) }
+        .map { it.removePrefix("elem:") }
+    return manual + windowed.filter { w.blocksNow(ScheduleKeys.elem(it), nowMin) } + quotaHidden + listHidden
 }
 
 fun Store.windowedAppPackages(): Set<String> =

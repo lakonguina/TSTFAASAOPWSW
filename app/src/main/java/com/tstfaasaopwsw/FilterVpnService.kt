@@ -67,7 +67,7 @@ class FilterVpnService : VpnService() {
             while (running) {
                 val n = input.read(buf)
                 if (n <= 0) continue
-                runCatching { DnsFilter.handle(buf, n, store.controlledDomains(), output, upstream) }
+                runCatching { DnsFilter.handle(buf, n, store.controlledDomains(), store.allImportedDomains(), output, upstream) }
             }
         } catch (_: Exception) {
             // tun closed / thread interrupted: normal end.

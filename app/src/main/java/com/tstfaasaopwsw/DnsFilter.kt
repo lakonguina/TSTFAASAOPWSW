@@ -10,8 +10,13 @@ object DnsFilter {
 
     private const val UPSTREAM_DNS = "1.1.1.1"
 
-    /** Handles an IPv4/UDP packet to the virtual DNS: filter or relay, then reply. */
-    fun handle(pkt: ByteArray, len: Int, blocked: Set<String>, out: FileOutputStream, upstream: DatagramSocket) {
+    /**
+     * Handles an IPv4/UDP packet to the virtual DNS: filter or relay, then reply. [blocked]
+     * is the small set of controlled patterns (scanned); [imported] is the big imported
+     * blocklist, matched by label walk (O(labels)), so tens of thousands of domains cost
+     * nothing per query.
+     */
+    fun handle(pkt: ByteArray, len: Int, blocked: Set<String>, imported: Set<String>, out: FileOutputStream, upstream: DatagramSocket) {
         if (len < 28) return
         if ((pkt[0].toInt() ushr 4 and 0xF) != 4) return   // IPv4 only
         val ihl = (pkt[0].toInt() and 0xF) * 4
@@ -22,7 +27,7 @@ object DnsFilter {
         // DNS level = domain only. A URL pattern (e.g. https://x.com/path) blocks its
         // whole host here (x.com); path filtering stays in the in-house browser.
         val domain = (DnsPacket.question(pkt, dnsStart, len) ?: return).lowercase()
-        val isBlocked = blocked.any { UrlRules.matchesDomain(domain, it) }
+        val isBlocked = blocked.any { UrlRules.matchesDomain(domain, it) } || suffixMatch(domain, imported)
 
         // Swap source <-> destination to build the reply.
         val srcIp = pkt.copyOfRange(12, 16)

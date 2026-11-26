@@ -12,6 +12,16 @@ object Config {
     /** Quick choices for the delay picker (minutes); a free field allows any other value. */
     val delayChoicesMinutes: List<Long> = listOf(0, 5, 10, 20, 30, 60, 120, 360, 720, 1440)
 
+    /**
+     * Ready-made domain blocklists to import (label -> raw hosts-file URL). A `hosts` format
+     * (`0.0.0.0 domain`) or a plain domain-per-line list both parse. Any other URL works too.
+     */
+    val blocklistPresets: List<Pair<String, String>> = listOf(
+        "No porn" to "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn-only/hosts",
+        "No gambling" to "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/gambling-only/hosts",
+        "No social" to "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/social-only/hosts",
+    )
+
     fun formatDelay(min: Long): String = when {
         min <= 0L -> "none"
         min == 1L -> "1 min (test)"

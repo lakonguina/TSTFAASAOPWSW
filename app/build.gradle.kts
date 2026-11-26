@@ -63,6 +63,12 @@ android {
         compose = true
         buildConfig = true // expose BuildConfig.VERSION_CODE à l'updater
     }
+
+    // Tests unitaires JVM (JUnit). La logique pure (règles d'URL, fenêtres, file d'attente,
+    // quotas) tourne sur une SharedPreferences factice en mémoire : pas de device, rapide.
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
     // Le compilateur Compose vient maintenant du plugin org.jetbrains.kotlin.plugin.compose
     // (Kotlin 2.x) ; plus de kotlinCompilerExtensionVersion à épingler.
 }
@@ -82,6 +88,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
@@ -92,4 +99,6 @@ dependencies {
     // Navigateur embarqué : GeckoView (moteur Firefox). Version ESR 128, compatible
     // compileSdk 34. C'est la seule base Android qui laisse l'app filtrer la navigation.
     implementation("org.mozilla.geckoview:geckoview:135.0.20250216192613")
+
+    testImplementation("junit:junit:4.13.2")
 }

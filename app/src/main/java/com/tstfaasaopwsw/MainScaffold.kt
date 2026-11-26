@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -46,34 +47,27 @@ internal fun BlockHost(onHome: () -> Unit) {
     val snapshot = remember(tick) { buildSnapshot(context) }
     val refresh: () -> Unit = { tick++ }
     val store = remember { Store.get(context) }
-    var tab by rememberSaveable { mutableIntStateOf(0) }
-    var openedKey by rememberSaveable { mutableStateOf<String?>(null) }
-    var editing by rememberSaveable { mutableStateOf(false) }
-    val services = produceState<List<ServiceInfo>?>(initialValue = null, appsEpoch, tick) { value = loadServices(context) }
-    val opened = services.value?.firstOrNull { it.key == openedKey }
-    if (opened != null) BackHandler { openedKey = null }
+    var tab by rememberSaveable { mutableIntStateOf(0) } // 0 = Lists, 1 = General
+    var openedListId by rememberSaveable { mutableStateOf<String?>(null) }
+    val openedList = remember(openedListId, tick, appsEpoch) { store.ruleLists().firstOrNull { it.id == openedListId } }
+    if (openedList != null) BackHandler { openedListId = null }
 
     GlassScene(
         content = {
             Box(Modifier.fillMaxSize()) {
                 when {
-                    opened != null -> ServiceDetailScreen(
-                        opened, snapshot, refresh,
-                        onBack = { openedKey = null },
-                        onEdit = { editing = true },
-                        onDelete = { store.purgeService(opened); PolicyManager.reconcile(context); openedKey = null; refresh() },
-                    )
-                    tab == 0 -> ServicesScreen(services.value, snapshot, refresh, onOpen = { openedKey = it.key })
+                    openedList != null -> ListDetailScreen(openedList, snapshot, refresh, onBack = { openedListId = null })
+                    tab == 0 -> ListsScreen(snapshot, refresh, onOpen = { openedListId = it.id })
                     else -> SettingsScreen(snapshot, refresh)
                 }
             }
         },
         chrome = {
-            if (opened == null) {
+            if (openedList == null) {
                 GlassSegmentedBar(
                     tabs = listOf(
                         GlassTab(Icons.Filled.Home, "Web", false, onHome),
-                        GlassTab(Icons.Filled.Lock, "Apps", tab == 0) { tab = 0 },
+                        GlassTab(Icons.Filled.PlaylistPlay, "Lists", tab == 0) { tab = 0 },
                         GlassTab(Icons.Filled.Settings, "General", tab == 1) { tab = 1 },
                     ),
                     modifier = Modifier.align(Alignment.BottomCenter),
@@ -81,13 +75,4 @@ internal fun BlockHost(onHome: () -> Unit) {
             }
         },
     )
-
-    if (editing && opened != null) {
-        GlassBottomSheet(onDismiss = { editing = false }, title = "Edit service") {
-            ServiceForm(
-                initial = ServiceDef(opened.key, opened.label, opened.packages, opened.domain),
-                onSave = { def -> store.upsertService(def); editing = false; refresh() },
-            )
-        }
-    }
 }

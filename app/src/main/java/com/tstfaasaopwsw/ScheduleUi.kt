@@ -27,11 +27,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,11 +66,22 @@ internal fun RuleRow(
     val quota = remember(snap) { store.quotaFor(key) }
     var sheetOpen by remember { mutableStateOf(false) }
 
+    // Live refresh of the "time left" readout while a quota is set.
+    var nowTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(quota, key) { if (quota != null) while (true) { delay(15_000); nowTick++ } }
+    val remainingSec = remember(snap, quota, nowTick) {
+        quota?.let {
+            if (key.startsWith("app:")) {
+                (it * 60L - AppUsage.foregroundSecondsToday(context, key.removePrefix("app:"))).coerceAtLeast(0L).toInt()
+            } else store.quotaRemainingSeconds(key) ?: 0
+        }
+    }
+
     ListItem(
         headlineContent = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Text(
-                if (pendingAt != null) "$pendingVerb ${countdownLive(pendingAt)}" else summary(window, quota),
+                if (pendingAt != null) "$pendingVerb ${countdownLive(pendingAt)}" else summary(window, quota, remainingSec),
                 style = MaterialTheme.typography.labelSmall,
                 color = if (pendingAt != null) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -139,14 +152,22 @@ internal fun WebSectionHeader(domain: String, refresh: () -> Unit) {
     }
 }
 
-private fun summary(window: Window?, quota: Int?): String {
+private fun summary(window: Window?, quota: Int?, remainingSec: Int?): String {
     val hours = if (window == null) "Always" else "${hhmm(window.startMin)}–${hhmm(window.endMin)}"
-    val limit = quota?.let { "$it min/day" } ?: "no daily limit"
+    val limit = quota?.let {
+        val left = when {
+            remainingSec == null -> ""
+            remainingSec <= 0 -> " · used up"
+            remainingSec < 60 -> " · <1 min left"
+            else -> " · ${(remainingSec + 59) / 60} min left"
+        }
+        "$it min/day$left"
+    } ?: "no daily limit"
     return "$hours · $limit"
 }
 
 @Composable
-private fun ScheduleSheet(window: Window?, quota: Int?, onApply: (Window?, Int?) -> Unit) {
+internal fun ScheduleSheet(window: Window?, quota: Int?, onApply: (Window?, Int?) -> Unit) {
     var startH by remember { mutableIntStateOf((window?.startMin ?: 480) / 60) }
     var endH by remember { mutableIntStateOf((window?.endMin ?: 1320) / 60) }
     var minutes by remember { mutableStateOf(quota?.toString() ?: "") }
@@ -193,4 +214,4 @@ private fun HourStepper(label: String, hour: Int, onChange: (Int) -> Unit) {
     }
 }
 
-private fun hhmm(min: Int): String = "%02d:%02d".format((min / 60) % 24, min % 60)
+internal fun hhmm(min: Int): String = "%02d:%02d".format((min / 60) % 24, min % 60)

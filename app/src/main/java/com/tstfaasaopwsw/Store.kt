@@ -20,6 +20,8 @@ class Store private constructor(internal val sp: SharedPreferences) {
     internal val pending = PendingQueue(sp)
     private val historyStore = BrowsingHistory(sp)
     private val browserState = BrowserState(sp)
+    private val bookmarkStore = Bookmarks(sp)
+    private val downloadLog = DownloadLog(sp)
 
     private fun set(key: String) = sp.getStringSet(key, emptySet())!!.toSet()
     internal fun putSets(vararg e: Pair<String, Set<String>>) =
@@ -51,6 +53,17 @@ class Store private constructor(internal val sp: SharedPreferences) {
     fun history(): List<String> = historyStore.entries()
     fun addHistory(url: String) = historyStore.add(url)
     fun clearHistory() = historyStore.clear()
+
+    // --- bookmarks (delegated) ---
+    fun bookmarks(): List<Bookmarks.Entry> = bookmarkStore.entries()
+    fun isBookmarked(url: String): Boolean = bookmarkStore.has(url)
+    fun addBookmark(url: String, title: String) = bookmarkStore.add(url, title)
+    fun removeBookmark(url: String) = bookmarkStore.remove(url)
+
+    // --- downloads (delegated) ---
+    fun downloads(): List<DownloadLog.Entry> = downloadLog.entries()
+    fun addDownload(url: String, name: String) = downloadLog.add(url, name)
+    fun clearDownloads() = downloadLog.clear()
 
     // --- pending actions (delegated) ---
     fun pendingUnblockAt(pkg: String) = pending.at(UB, pkg)
@@ -87,6 +100,9 @@ class Store private constructor(internal val sp: SharedPreferences) {
     companion object {
         fun get(context: Context) =
             Store(context.applicationContext.getSharedPreferences("forcelist", Context.MODE_PRIVATE))
+
+        /** For unit tests: a Store over any [SharedPreferences] (e.g. an in-memory fake). */
+        internal fun fromPrefs(sp: SharedPreferences) = Store(sp)
 
         internal const val K_DELAY = "delayMin"
         internal const val K_BLOCKED = "blocked"

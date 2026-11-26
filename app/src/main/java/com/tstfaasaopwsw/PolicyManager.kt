@@ -28,11 +28,11 @@ object PolicyManager {
             OrphanRepair.run(dpm, admin, context.packageManager, store.blocked, pkg)
             store.markRepaired()
         }
-        applyAppBlocks(dpm, admin, store, lines)
+        applyAppBlocks(dpm, admin, store, context, lines)
         ElementHider.sync(store) // matured hide-rule disables take effect if the browser is live
         FirewallPolicy.apply(context, true) // filter always on; not user-toggleable
         hardenAndDefaultBrowser(dpm, admin, pkg, lines)
-        val wake = listOfNotNull(nextWake, store.nextWindowBoundaryMillis()).minOrNull()
+        val wake = listOfNotNull(nextWake, store.nextWindowBoundaryMillis(), appQuotaWake(context, store)).minOrNull()
         PolicyAlarm.schedule(context, wake)
         if (wake != null) {
             val mins = ((wake - System.currentTimeMillis()) / 60_000L).coerceAtLeast(0)
@@ -50,11 +50,27 @@ object PolicyManager {
 
     // Each managed app: hidden (invisible) AND suspended (frozen), so a blocked app
     // can't be reopened. On unblock: the reverse.
+    /** App packages whose daily minutes quota is set and already spent today (system-measured). */
+    private fun quotaExhaustedApps(context: Context, store: Store): Set<String> =
+        store.quotas().keys.filter { it.startsWith("app:") }.map { it.removePrefix("app:") }
+            .filter { pkg -> AppUsage.foregroundSecondsToday(context, pkg) >= (store.quotaFor(ScheduleKeys.app(pkg)) ?: 0) * 60L }
+            .toSet()
+
+    /** Soonest instant an app quota runs out (to wake and freeze it), or null. */
+    private fun appQuotaWake(context: Context, store: Store): Long? =
+        store.quotas().keys.filter { it.startsWith("app:") }.mapNotNull { key ->
+            val pkg = key.removePrefix("app:")
+            val limit = (store.quotaFor(key) ?: return@mapNotNull null) * 60L
+            val used = AppUsage.foregroundSecondsToday(context, pkg)
+            if (used >= limit) nextMidnightMillis() else System.currentTimeMillis() + (limit - used) * 1000L
+        }.minOrNull()
+
     private fun applyAppBlocks(
-        dpm: DevicePolicyManager, admin: ComponentName, store: Store, lines: MutableList<String>,
+        dpm: DevicePolicyManager, admin: ComponentName, store: Store, context: Context, lines: MutableList<String>,
     ) {
-        val blocked = store.effectiveBlockedApps()
-        for (p in store.known + store.windowedAppPackages()) {
+        val quotaApps = store.quotas().keys.filter { it.startsWith("app:") }.map { it.removePrefix("app:") }.toSet()
+        val blocked = store.effectiveBlockedApps() + quotaExhaustedApps(context, store)
+        for (p in store.known + store.windowedAppPackages() + quotaApps) {
             if (p in blocked) {
                 runCatching { dpm.setPackagesSuspended(admin, arrayOf(p), true) }
                 runCatching { dpm.setApplicationHidden(admin, p, true) }
