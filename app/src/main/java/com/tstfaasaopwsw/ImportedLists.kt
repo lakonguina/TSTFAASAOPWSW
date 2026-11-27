@@ -1,5 +1,7 @@
 package com.tstfaasaopwsw
 
+import android.content.Context
+
 /**
  * Imported domain blocklists (e.g. a "no porn" hosts list from GitHub). Each imported list's
  * domains are stored under `imp:<listId>`, newline-joined. Because a blocklist can hold tens
@@ -28,6 +30,43 @@ fun Store.setImportDomains(listId: String, domains: Set<String>) {
 fun Store.clearImportDomains(listId: String) {
     sp.edit().remove(impKey(listId)).apply()
     ImportCache.invalidate()
+}
+
+// --- periodic refresh: re-fetch each imported list's source on a schedule ---
+
+private fun refreshKey(listId: String) = "impts:$listId"
+private const val REFRESH_INTERVAL_MS = 24 * 3_600_000L // at most one re-fetch / 24 h per list
+
+private fun Store.lastRefresh(listId: String): Long = sp.getLong(refreshKey(listId), 0L)
+private fun Store.markRefreshed(listId: String) =
+    sp.edit().putLong(refreshKey(listId), System.currentTimeMillis()).apply()
+
+/**
+ * Re-fetches every imported blocklist whose source hasn't been pulled in [REFRESH_INTERVAL_MS],
+ * off the main thread. A refresh replaces the stored domains with the source's current set: a
+ * grown upstream list tightens immediately; a shrunk one is the source's own call, not a user
+ * loosening, so it applies directly. Silent on network error (keeps the last good set).
+ */
+object ImportedLists {
+    fun refreshInBackground(context: Context) {
+        val app = context.applicationContext
+        Thread { runCatching { refresh(app) } }.apply { isDaemon = true }.start()
+    }
+
+    private fun refresh(context: Context) {
+        val store = Store.get(context)
+        val now = System.currentTimeMillis()
+        var changed = false
+        for (list in store.ruleLists().filter { it.imported }) {
+            val url = list.sourceUrl ?: continue
+            if (now - store.lastRefresh(list.id) < REFRESH_INTERVAL_MS) continue
+            store.markRefreshed(list.id) // stamp first, so a failing URL isn't retried every tick
+            val domains = Downloads.getText(url)?.let { parseBlocklist(it) } ?: continue
+            if (domains.isEmpty()) continue
+            if (domains != store.importDomains(list.id)) { store.setImportDomains(list.id, domains); changed = true }
+        }
+        if (changed) PolicyManager.reconcile(context)
+    }
 }
 
 /** Every blocked domain across all imported lists, as one set (cached). */

@@ -6,15 +6,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -91,5 +97,32 @@ internal fun SettingsScreen(snap: Snapshot, refresh: () -> Unit) {
                 }
             }
         }
+        item { SectionHeader("Firewall") }
+        item {
+            var lockdown by remember { mutableStateOf(store.firewallLockdown) }
+            GlassCard(Modifier.fillMaxWidth().padding(horizontal = Space.lg)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Lockdown mode", style = MaterialTheme.typography.bodyLarge)
+                        Switch(
+                            checked = lockdown,
+                            onCheckedChange = { lockdown = it; store.setFirewallLockdown(it); refresh() },
+                        )
+                    }
+                    Text(
+                        "The domain filter runs through an always-on VPN. Lockdown blocks all traffic " +
+                            "if that VPN ever fails — maximum enforcement, but a filter bug cuts the network " +
+                            "until you fix it over adb. Leave off until the filter is proven on your phone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        item { Spacer(Modifier.height(Space.lg)) }
     }
 }

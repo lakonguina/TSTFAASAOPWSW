@@ -1,0 +1,7 @@
+/* Hide the "Up next" / related-videos sidebar and in-player end-screen suggestions, so one
+   video doesn't pull you into the next. Source: digitalhabits/dh-focus (youtubeRelatedCssOff). */
+#related,
+ytd-watch-next-secondary-results-renderer,
+#secondary.ytd-watch-flexy,
+.ytp-ce-element.ytp-ce-video,
+.ytp-fullscreen-grid { display: none !important; }

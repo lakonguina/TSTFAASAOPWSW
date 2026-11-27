@@ -1,0 +1,3 @@
+/* Hide the main News Feed. role="feed" is Facebook's own ARIA hook and survives the hashed
+   class names, so this keeps working across redesigns. */
+div[role="feed"] { display: none !important; }

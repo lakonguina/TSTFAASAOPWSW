@@ -1,0 +1,9 @@
+{
+  "manifest_version": 2,
+  "name": "igexplore",
+  "version": "1",
+  "browser_specific_settings": { "gecko": { "id": "igexplore@tstfaasaopwsw" } },
+  "content_scripts": [
+    { "matches": ["*://instagram.com/*", "*://*.instagram.com/*"], "js": ["hide.js"], "run_at": "document_start" }
+  ]
+}

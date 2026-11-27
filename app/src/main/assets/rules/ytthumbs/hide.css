@@ -1,0 +1,10 @@
+/* Hide every video thumbnail site-wide (keep titles/links). Selectors from the actively
+   maintained digitalhabits/dh-focus (selectors.js, youtubeThumbnailsCssOff); desktop + mobile. */
+.yt-lockup-view-model__content-image,
+yt-thumbnail-view-model,
+ytd-thumbnail,
+ytd-playlist-thumbnail,
+yt-collection-thumbnail-view-model,
+a.yt-lockup-view-model-wiz__content-image,
+.media-item-thumbnail-container,
+.video-thumbnail-img { display: none !important; }

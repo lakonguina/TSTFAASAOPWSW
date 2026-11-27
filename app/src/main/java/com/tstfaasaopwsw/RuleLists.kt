@@ -52,6 +52,26 @@ fun Store.deleteList(id: String) {
     saveLists(ruleLists().filterNot { it.id == id })
 }
 
+// --- deferred removal of an imported blocklist (loosening -> through the reflection delay) ---
+
+/**
+ * Removing an imported blocklist unblocks thousands of domains at once, so it is a loosening
+ * and must defer like any other (unblock, lower delay). With a delay set, the list stays
+ * active and a pending [PendingQueue.LR] matures the actual removal; with no delay it removes
+ * now. The domains keep enforcing until maturation (they are never cleared early).
+ */
+fun Store.removeImportedList(id: String) {
+    if (id == DEFAULT_LIST_ID) return
+    if (delayMinutes <= 0L) finalizeImportedListRemoval(id)
+    else if (pending.at(PendingQueue.LR, id) == null) pending.add(PendingQueue.LR, id, effective())
+}
+
+/** Effective instant a pending imported-list removal matures, or null. */
+fun Store.pendingImportRemovalAt(id: String): Long? = pending.at(PendingQueue.LR, id)
+
+/** The actual removal (called now, or by [Store.mature] when a deferred removal comes due). */
+internal fun Store.finalizeImportedListRemoval(id: String) = deleteList(id)
+
 private fun Store.memberMap(): Map<String, String> =
     sp.getStringSet(K_MEMBER, emptySet())!!.mapNotNull {
         val p = it.split(LSEP); if (p.size == 2) p[0] to p[1] else null
@@ -95,24 +115,35 @@ fun Store.membersOf(listId: String): List<String> =
 /** The schedule key for a list's own window/quota. */
 fun listKey(listId: String) = "list:$listId"
 
-/** Browser-measured seconds spent today across a list's web/feed members (its shared budget). */
-fun Store.listWebUsedSeconds(listId: String): Int =
-    membersOf(listId).filter { it.startsWith("web:") || it.startsWith("elem:") }.sumOf { usedSecondsToday(it) }
+/**
+ * Seconds spent today across all of a list's members (its shared budget). Web/feed time is
+ * the browser's own per-facet counter; app time is the system-measured foreground seconds
+ * that [PolicyManager] folds into the same counters each reconcile (keyed `app:<pkg>`), so
+ * the sum is uniform and app-inclusive without needing a [android.content.Context] here.
+ */
+fun Store.listUsedSeconds(listId: String): Int =
+    membersOf(listId).filter { it.startsWith("web:") || it.startsWith("elem:") || it.startsWith("app:") }
+        .sumOf { usedSecondsToday(it) }
 
 /** Seconds left on a list's shared quota today (floored at 0), or null if the list has none. */
 fun Store.listQuotaRemainingSeconds(listId: String): Int? {
     val q = quotaFor(listKey(listId)) ?: return null
-    return (q * 60 - listWebUsedSeconds(listId)).coerceAtLeast(0)
+    return (q * 60 - listUsedSeconds(listId)).coerceAtLeast(0)
 }
 
 private fun Store.listQuotaSpent(listId: String): Boolean {
     val q = quotaFor(listKey(listId)) ?: return false
-    return listWebUsedSeconds(listId) >= q * 60
+    return listUsedSeconds(listId) >= q * 60
 }
 
-/** A facet's list closes it right now via the list window (any member) or shared quota (web/feed). */
+/** A facet's list closes it right now via the list window (any member) or its shared quota. */
 fun Store.listBlocksFacet(facet: String, nowMin: Int, quotaCounts: Boolean): Boolean {
     val id = listIdOf(facet)
     val windowBlocks = windowFor(listKey(id))?.allows(nowMin) == false
     return windowBlocks || (quotaCounts && listQuotaSpent(id))
 }
+
+/** App packages that are members of a list carrying a shared quota (for usage metering). */
+fun Store.quotaListAppPackages(): Set<String> =
+    activeFacets().filter { it.startsWith("app:") && quotaFor(listKey(listIdOf(it))) != null }
+        .map { it.removePrefix("app:") }.toSet()

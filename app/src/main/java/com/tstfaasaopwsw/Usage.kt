@@ -43,6 +43,15 @@ fun Store.addUsageSeconds(key: String, secs: Int) {
     val m = usageRaw(); m[key] = (m[key] ?: 0) + secs; saveUsage(m)
 }
 
+/**
+ * Overwrites today's counter for [key] with an absolute [secs]. Used for app facets, whose
+ * foreground time is a point-in-time system read ([AppUsage]) rather than a browser tick, so
+ * it is set (not accumulated) into the shared usage store on each reconcile.
+ */
+fun Store.setUsageSeconds(key: String, secs: Int) {
+    val m = usageRaw(); m[key] = secs; saveUsage(m)
+}
+
 /** A browser-measured (web/elem) quota that is set and already spent. */
 fun Store.quotaExhausted(key: String): Boolean {
     val q = quotaFor(key) ?: return false

@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 
 /**
  * Per-service controls, grouped: an "Application" block (present when the service has a
@@ -52,6 +53,7 @@ internal fun ServiceDetailScreen(
             horizontalArrangement = Arrangement.spacedBy(Space.xs),
         ) {
             GlassIconButton(onBack, Icons.AutoMirrored.Filled.ArrowBack, "Back")
+            ServiceIcon(service, 32.dp)
             Text(
                 service.label,
                 style = MaterialTheme.typography.titleLarge,

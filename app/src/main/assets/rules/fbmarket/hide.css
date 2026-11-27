@@ -1,0 +1,3 @@
+/* Hide Marketplace entry points (left-nav shortcut and any in-page links). */
+a[href^="/marketplace"],
+a[href^="https://www.facebook.com/marketplace"] { display: none !important; }

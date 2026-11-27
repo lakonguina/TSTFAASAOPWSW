@@ -9,5 +9,6 @@ class TickReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         PolicyManager.reconcile(context)
         Updater.checkInBackground(context) // checks GitHub at boot and on each due time
+        ImportedLists.refreshInBackground(context) // re-pulls imported blocklists (<=1/day each)
     }
 }

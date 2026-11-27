@@ -1,0 +1,2 @@
+/* Hide the comments section under a video. */
+ytd-comments#comments, #comments.ytd-watch-flexy { display: none !important; }

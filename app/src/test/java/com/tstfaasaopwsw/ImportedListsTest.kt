@@ -2,6 +2,8 @@ package com.tstfaasaopwsw
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -53,5 +55,27 @@ class ImportedListsTest {
         s.deleteList(id)
         assertFalse(s.isDomainImportBlocked("bad.com"))
         assertFalse(s.ruleLists().any { it.id == id })
+    }
+
+    @Test fun removing_an_imported_list_with_no_delay_is_immediate() {
+        val s = store()
+        val id = s.createList("No porn", "https://example/hosts")
+        s.setImportDomains(id, setOf("bad.com"))
+        s.removeImportedList(id)
+        assertFalse(s.isDomainImportBlocked("bad.com"))
+        assertFalse(s.ruleLists().any { it.id == id })
+        assertNull(s.pendingImportRemovalAt(id))
+    }
+
+    @Test fun removing_an_imported_list_defers_under_the_reflection_delay() {
+        val s = store()
+        s.requestDelay(60) // 1 h reflection delay
+        val id = s.createList("No porn", "https://example/hosts")
+        s.setImportDomains(id, setOf("bad.com"))
+        s.removeImportedList(id)
+        // Loosening is deferred: the list keeps blocking until the pending removal matures.
+        assertTrue(s.isDomainImportBlocked("bad.com"))
+        assertTrue(s.ruleLists().any { it.id == id })
+        assertNotNull(s.pendingImportRemovalAt(id))
     }
 }

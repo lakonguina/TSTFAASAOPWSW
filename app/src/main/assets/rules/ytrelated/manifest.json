@@ -1,0 +1,9 @@
+{
+  "manifest_version": 2,
+  "name": "ytrelated",
+  "version": "2",
+  "browser_specific_settings": { "gecko": { "id": "ytrelated@tstfaasaopwsw" } },
+  "content_scripts": [
+    { "matches": ["*://youtube.com/*", "*://*.youtube.com/*"], "css": ["hide.css"], "run_at": "document_start" }
+  ]
+}

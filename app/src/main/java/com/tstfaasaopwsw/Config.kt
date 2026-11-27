@@ -42,13 +42,35 @@ object Config {
     }
 
     /**
-     * Built-in catalog of hideable elements (mirrors xpath-blocklist.xlsx). Each is a tiny
-     * bundled extension (assets/rules/<extId>); the Web-tab toggle enables or disables it.
+     * Built-in catalog of hideable elements. Each is a tiny bundled web extension
+     * (assets/rules/<extId>) that hides part of a site: sitewide rules ship a `hide.css`,
+     * path-scoped ones a `hide.js` (watches SPA navigation, hides only on the named paths).
+     * Selectors lean on stable hooks (custom elements, `data-testid`, `role`, real `<article>`
+     * tags) so they survive localisation and class-name churn; the Web-tab toggle enables or
+     * disables each. Add a rule by adding an entry here plus its assets/rules/<extId> bundle.
      */
     val elementCatalog: List<ElementRule> = listOf(
+        // X / Twitter
         ElementRule("x.com", "Feed", "feedx"),
         ElementRule("x.com", "Right sidebar", "sidebarx"),
+        ElementRule("x.com", "Explore page", "xexplore"),
+        // YouTube
         ElementRule("youtube.com", "Home feed", "ytfeed"),
+        ElementRule("youtube.com", "Thumbnails", "ytthumbs"),
+        ElementRule("youtube.com", "Shorts", "ytshorts"),
+        ElementRule("youtube.com", "Comments", "ytcomments"),
+        ElementRule("youtube.com", "Up-next sidebar", "ytrelated"),
+        // Reddit
+        ElementRule("reddit.com", "Home feed", "rdfeed"),
+        // Instagram
+        ElementRule("instagram.com", "Home feed", "igfeed"),
+        ElementRule("instagram.com", "Explore page", "igexplore"),
+        ElementRule("instagram.com", "Reels page", "igreels"),
+        // TikTok
+        ElementRule("tiktok.com", "For You feed", "ttforyou"),
+        // Facebook
+        ElementRule("facebook.com", "Feed", "fbfeed"),
+        ElementRule("facebook.com", "Marketplace", "fbmarket"),
     )
 
     /**

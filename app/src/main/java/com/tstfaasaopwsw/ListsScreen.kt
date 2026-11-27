@@ -253,6 +253,7 @@ private fun ImportedListDetail(list: RuleList, onBack: () -> Unit) {
     val context = LocalContext.current
     val store = remember { Store.get(context) }
     val count = remember(list.id) { store.importCount(list.id) }
+    var pendingAt by remember { mutableStateOf(store.pendingImportRemovalAt(list.id)) }
     val insets = GlassContentInsets
     Column(Modifier.fillMaxSize()) {
         Spacer(Modifier.height(insets.calculateTopPadding()))
@@ -277,10 +278,22 @@ private fun ImportedListDetail(list: RuleList, onBack: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 Spacer(Modifier.height(Space.lg))
-                Button(
-                    onClick = { store.deleteList(list.id); PolicyManager.reconcile(context); onBack() },
-                    modifier = Modifier.fillMaxWidth(), shape = GlassShape.pill,
-                ) { Text("Remove this blocklist") }
+                val at = pendingAt
+                if (at != null) {
+                    Text(
+                        "Removal pending — unlocks ${countdownLive(at)}. The list stays active until then.",
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Button(
+                        onClick = {
+                            store.removeImportedList(list.id); PolicyManager.reconcile(context)
+                            val now = store.pendingImportRemovalAt(list.id)
+                            if (now == null) onBack() else pendingAt = now // deferred by the reflection delay
+                        },
+                        modifier = Modifier.fillMaxWidth(), shape = GlassShape.pill,
+                    ) { Text("Remove this blocklist") }
+                }
             }
         }
     }

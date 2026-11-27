@@ -49,9 +49,10 @@ class PendingQueue(private val sp: SharedPreferences) {
     companion object {
         private const val K_PENDING = "pending"
         private const val SEP = "\u001F"
-        const val UB = "UB" // unblock an app       (payload = package)
-        const val DD = "DD" // lower the delay      (payload = minutes)
-        const val WR = "WR" // remove a web rule    (payload = pattern)
-        const val ED = "ED" // disable a hide rule  (payload = element id)
+        const val UB = "UB" // unblock an app          (payload = package)
+        const val DD = "DD" // lower the delay         (payload = minutes)
+        const val WR = "WR" // remove a web rule       (payload = pattern)
+        const val ED = "ED" // disable a hide rule     (payload = element id)
+        const val LR = "LR" // remove an imported list (payload = list id)
     }
 }

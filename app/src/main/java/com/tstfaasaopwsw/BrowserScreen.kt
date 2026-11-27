@@ -69,6 +69,15 @@ internal fun Browser(
     var topColor by remember { mutableStateOf<Color?>(null) }
     var barHeight by remember { mutableIntStateOf(0) } // measured glass-bar height, for content inset
 
+    // Snapshots the live tab (the one the GeckoView currently shows) into its own thumbnail.
+    // Called before switching away, so every tab — not just the one open when the grid is
+    // shown — carries a fresh preview in the Tabs grid.
+    fun snapshotLive() {
+        val v = viewRef.value ?: return
+        val t = tabs.getOrNull(current) ?: return
+        runCatching { v.capturePixels().accept { bmp -> if (bmp != null) t.thumbnail = bmp } }
+    }
+
     // Enqueues a download and records it (see the Downloads screen).
     fun doDownload(url: String, name: String) {
         runCatching {
@@ -91,6 +100,7 @@ internal fun Browser(
         Tab(runtime, store, onNewTab = { onNewTabRef.value(it) }, onDownload = { u, n -> onDownloadRef.value(u, n) })
             .also { if (url != null) it.load(url) }
     onNewTabRef.value = { s ->
+        snapshotLive() // preview the tab we're leaving before the new one takes focus
         tabs.add(Tab(runtime, store, existing = s, onNewTab = { onNewTabRef.value(it) }, onDownload = { u, n -> onDownloadRef.value(u, n) }))
         current = tabs.lastIndex
         screen = Screen.Browser
@@ -190,6 +200,7 @@ internal fun Browser(
     val statusBarH = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     fun openTab() {
+        snapshotLive() // preview the tab we're leaving
         tabs.add(newTab(BrowserActivity.HOME))
         current = tabs.lastIndex
         screen = Screen.Browser
@@ -212,13 +223,6 @@ internal fun Browser(
     fun copy(text: String) {
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager)
             ?.setPrimaryClip(android.content.ClipData.newPlainText("url", text))
-    }
-
-    // Snapshot the live tab into its thumbnail, for the Tabs grid.
-    fun snapshotCurrent() {
-        val v = viewRef.value ?: return
-        val t = tabs.getOrNull(current) ?: return
-        runCatching { v.capturePixels().accept { bmp -> if (bmp != null) t.thumbnail = bmp } }
     }
 
     BackHandler {
@@ -297,7 +301,7 @@ internal fun Browser(
                             onForward = { tab.session.goForward() },
                             onReload = { tab.session.reload() },
                             onGo = { tab.load(it) },
-                            onTabs = { snapshotCurrent(); screen = Screen.Tabs },
+                            onTabs = { snapshotLive(); screen = Screen.Tabs },
                             onHistory = { screen = Screen.History },
                             onBookmarks = { screen = Screen.Bookmarks },
                             onDownloads = { screen = Screen.Downloads },
@@ -321,7 +325,7 @@ internal fun Browser(
             ContextMenuSheet(
                 target = target,
                 onDismiss = { tab.contextTarget = null },
-                onOpenNewTab = { url -> tabs.add(newTab(url)); current = tabs.lastIndex; screen = Screen.Browser },
+                onOpenNewTab = { url -> snapshotLive(); tabs.add(newTab(url)); current = tabs.lastIndex; screen = Screen.Browser },
                 onCopy = { copy(it) },
                 onShare = { share(it) },
                 onDownload = { doDownload(it, android.net.Uri.parse(it).lastPathSegment ?: "image") },

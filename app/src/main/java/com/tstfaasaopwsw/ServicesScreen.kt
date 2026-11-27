@@ -180,7 +180,11 @@ internal fun ServiceIcon(service: ServiceInfo, size: Dp) {
     }
     val icon = favicon ?: service.icon
     if (icon != null) {
-        Image(icon, null, Modifier.size(size).clip(RoundedCornerShape(size / 4)))
+        // White tile behind the icon: most favicons are transparent PNGs designed for a light
+        // background, so without this they show the dark sheet through and read as black blocks.
+        Box(Modifier.size(size).clip(RoundedCornerShape(size / 4)).background(Color.White)) {
+            Image(icon, null, Modifier.size(size))
+        }
     } else {
         Box(
             Modifier.size(size).clip(RoundedCornerShape(size / 4))

@@ -67,8 +67,9 @@ private fun Map<String, Window>.blocksNow(key: String, nowMin: Int): Boolean =
 fun Store.effectiveBlockedApps(nowMin: Int = nowMinuteOfDay()): Set<String> {
     val w = windows()
     val windowed = w.keys.filter { it.startsWith("app:") }.map { it.removePrefix("app:") }
-    // An app is also closed outside its list's hours (list quota governs web/feed, not apps).
-    val listBlocked = activeFacets().filter { it.startsWith("app:") && listBlocksFacet(it, nowMin, quotaCounts = false) }
+    // An app is also closed outside its list's hours, or once the list's shared quota (which
+    // now counts app foreground time too, folded in by PolicyManager) is spent for the day.
+    val listBlocked = activeFacets().filter { it.startsWith("app:") && listBlocksFacet(it, nowMin, quotaCounts = true) }
         .map { it.removePrefix("app:") }
     return blocked + windowed.filter { w.blocksNow(ScheduleKeys.app(it), nowMin) } + listBlocked
 }

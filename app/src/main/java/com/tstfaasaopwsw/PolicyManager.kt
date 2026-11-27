@@ -28,9 +28,10 @@ object PolicyManager {
             OrphanRepair.run(dpm, admin, context.packageManager, store.blocked, pkg)
             store.markRepaired()
         }
+        foldAppUsage(context, store) // measure app foreground time into the shared list-quota counters
         applyAppBlocks(dpm, admin, store, context, lines)
         ElementHider.sync(store) // matured hide-rule disables take effect if the browser is live
-        FirewallPolicy.apply(context, true) // filter always on; not user-toggleable
+        FirewallPolicy.apply(context, true, lockdown = store.firewallLockdown) // filter always on
         hardenAndDefaultBrowser(dpm, admin, pkg, lines)
         val wake = listOfNotNull(nextWake, store.nextWindowBoundaryMillis(), appQuotaWake(context, store)).minOrNull()
         PolicyAlarm.schedule(context, wake)
@@ -64,6 +65,17 @@ object PolicyManager {
             val used = AppUsage.foregroundSecondsToday(context, pkg)
             if (used >= limit) nextMidnightMillis() else System.currentTimeMillis() + (limit - used) * 1000L
         }.minOrNull()
+
+    /**
+     * Writes each list-quota app's system-measured foreground seconds today into the shared
+     * usage counters (keyed `app:<pkg>`), so a list's shared budget counts app time the same
+     * way the browser counts web/feed time. Set (not added): the system read is absolute.
+     */
+    private fun foldAppUsage(context: Context, store: Store) {
+        for (pkg in store.quotaListAppPackages()) {
+            store.setUsageSeconds(ScheduleKeys.app(pkg), AppUsage.foregroundSecondsToday(context, pkg).toInt())
+        }
+    }
 
     private fun applyAppBlocks(
         dpm: DevicePolicyManager, admin: ComponentName, store: Store, context: Context, lines: MutableList<String>,
